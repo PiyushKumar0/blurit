@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BlurIt</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <header class="hdr">
+      <h1>BlurIt</h1>
+      <label class="switch" title="Master switch (Ctrl+Shift+B)">
+        <input type="checkbox" id="master" />
+        <span class="slider"></span>
+      </label>
+    </header>
+
+    <section class="group" aria-labelledby="features-label">
+      <h2 id="features-label">Features</h2>
+
+      <label class="row">
+        <span>Blur chat list</span>
+        <label class="switch sm">
+          <input type="checkbox" id="feature-list" />
+          <span class="slider"></span>
+        </label>
+      </label>
+
+      <label class="row">
+        <span>Blur chat header</span>
+        <label class="switch sm">
+          <input type="checkbox" id="feature-header" />
+          <span class="slider"></span>
+        </label>
+      </label>
+
+      <label class="row">
+        <span>Blur messages</span>
+        <label class="switch sm">
+          <input type="checkbox" id="feature-msgs" />
+          <span class="slider"></span>
+        </label>
+      </label>
+    </section>
+
+    <section class="group" aria-labelledby="tuning-label">
+      <h2 id="tuning-label">Tuning</h2>
+
+      <label class="row stack">
+        <span>
+          Blur intensity
+          <output id="radius-val" for="radius">8px</output>
+        </span>
+        <input type="range" id="radius" min="4" max="16" step="1" />
+      </label>
+
+      <label class="row stack">
+        <span>
+          Reveal delay
+          <output id="delay-val" for="delay">200ms</output>
+        </span>
+        <input type="range" id="delay" min="0" max="500" step="10" />
+      </label>
+    </section>
+
+    <footer class="hint">
+      <span>
+        Shortcut: <kbd id="shortcut">Ctrl+Shift+B</kbd>
+      </span>
+      <a id="rebind" href="#">Rebind…</a>
+    </footer>
+
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
