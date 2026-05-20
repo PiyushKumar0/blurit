@@ -82,6 +82,12 @@ body {
   gap: 4px;
 }
 
+.row.sub {
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .row.stack > span {
   display: flex;
   justify-content: space-between;

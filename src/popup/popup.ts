@@ -14,6 +14,7 @@ const master = $<HTMLInputElement>('master');
 const featureList = $<HTMLInputElement>('feature-list');
 const featureHeader = $<HTMLInputElement>('feature-header');
 const featureMsgs = $<HTMLInputElement>('feature-msgs');
+const revealLatest = $<HTMLInputElement>('reveal-latest');
 const radius = $<HTMLInputElement>('radius');
 const radiusVal = $<HTMLOutputElement>('radius-val');
 const delay = $<HTMLInputElement>('delay');
@@ -26,13 +27,14 @@ function paint(settings: Awaited<ReturnType<typeof loadSettings>>): void {
   featureList.checked = settings.features.list;
   featureHeader.checked = settings.features.header;
   featureMsgs.checked = settings.features.msgs;
+  revealLatest.checked = settings.revealLatest;
   radius.value = String(settings.radiusPx);
   radiusVal.value = `${settings.radiusPx}px`;
   delay.value = String(settings.delayMs);
   delayVal.value = `${settings.delayMs}ms`;
 
   const disabled = !settings.master;
-  for (const input of [featureList, featureHeader, featureMsgs, radius, delay]) {
+  for (const input of [featureList, featureHeader, featureMsgs, revealLatest, radius, delay]) {
     input.disabled = disabled;
   }
 }
@@ -86,6 +88,9 @@ featureHeader.addEventListener('change', () => {
 });
 featureMsgs.addEventListener('change', () => {
   persist({ features: { msgs: featureMsgs.checked } });
+});
+revealLatest.addEventListener('change', () => {
+  persist({ revealLatest: revealLatest.checked });
 });
 
 radius.addEventListener('input', () => {

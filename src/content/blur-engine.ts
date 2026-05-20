@@ -16,6 +16,7 @@ export function applySettings(settings: Settings): void {
   root.setAttribute(DATA_ATTRS.featureList, flag(settings.features.list));
   root.setAttribute(DATA_ATTRS.featureHeader, flag(settings.features.header));
   root.setAttribute(DATA_ATTRS.featureMsgs, flag(settings.features.msgs));
+  root.setAttribute(DATA_ATTRS.revealLatest, flag(settings.revealLatest));
   root.style.setProperty(CSS_VARS.radius, `${settings.radiusPx}px`);
   root.style.setProperty(CSS_VARS.delayIn, `${settings.delayMs}ms`);
 }

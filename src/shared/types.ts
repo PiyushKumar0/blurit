@@ -9,6 +9,7 @@ export interface Settings {
   features: FeatureToggles;
   radiusPx: number;
   delayMs: number;
+  revealLatest: boolean;
 }
 
 export type SemanticRole =
