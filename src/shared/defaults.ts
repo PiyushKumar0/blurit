@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: Settings = {
   features: { list: true, header: true, msgs: true },
   radiusPx: 8,
   delayMs: 200,
+  revealLatest: false,
 };
 
 export const RADIUS_MIN = 4;

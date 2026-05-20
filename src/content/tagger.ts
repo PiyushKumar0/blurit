@@ -14,6 +14,25 @@ export function tagSubtree(root: ParentNode): void {
   tagSystemAndDate(root);
 }
 
+/**
+ * Marks the latest (bottom-most) message row in the open conversation with
+ * data-blurit-latest="true".
+ */
+export function updateLatestMessage(): void {
+  const candidates = document.querySelectorAll(
+    `#main [role="row"]:not([${DATA_ATTRS.role}="date"]):not([${DATA_ATTRS.role}="system"])`,
+  );
+  const newLatest = candidates[candidates.length - 1] ?? null;
+  const oldLatest = document.querySelector(`#main [${DATA_ATTRS.latest}="true"]`);
+
+  if (oldLatest && oldLatest !== newLatest) {
+    oldLatest.removeAttribute(DATA_ATTRS.latest);
+  }
+  if (newLatest && oldLatest !== newLatest) {
+    newLatest.setAttribute(DATA_ATTRS.latest, 'true');
+  }
+}
+
 function tagComposer(root: ParentNode): void {
   // Composer footer is the most safety-critical no-blur target. Walk first.
   const footers = root.querySelectorAll('#main footer');

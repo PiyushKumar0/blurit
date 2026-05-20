@@ -1,4 +1,4 @@
-import { tagSubtree } from './tagger';
+import { tagSubtree, updateLatestMessage } from './tagger';
 
 /**
  * Single MutationObserver rooted at #app. Mutations coalesce into a
@@ -21,6 +21,7 @@ export function startObserver(appRoot: Element): MutationObserver {
       }
     }
     addedSubtrees.clear();
+    updateLatestMessage();
   };
 
   const schedule = () => {
@@ -41,6 +42,7 @@ export function startObserver(appRoot: Element): MutationObserver {
 
   // Initial sweep so anything mounted before we started gets tagged.
   tagSubtree(appRoot);
+  updateLatestMessage();
 
   return observer;
 }
