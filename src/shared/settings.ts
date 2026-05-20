@@ -28,6 +28,8 @@ function sanitize(raw: unknown): Settings {
       DELAY_MIN,
       DELAY_MAX,
     ),
+    revealLatest:
+      typeof s.revealLatest === 'boolean' ? s.revealLatest : DEFAULT_SETTINGS.revealLatest,
   };
 }
 

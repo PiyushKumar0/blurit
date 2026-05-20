@@ -5,7 +5,9 @@ export const DATA_ATTRS = {
   featureList: 'data-blurit-feature-list',
   featureHeader: 'data-blurit-feature-header',
   featureMsgs: 'data-blurit-feature-msgs',
+  revealLatest: 'data-blurit-reveal-latest',
   role: 'data-blurit-role',
+  latest: 'data-blurit-latest',
 } as const;
 
 export const CSS_VARS = {
