@@ -1,0 +1,101 @@
+/*
+ * BlurIt — visual privacy layer for WhatsApp Web.
+ *
+ * Design contract:
+ *   - Root flags on <html>: data-blurit-master, data-blurit-feature-list,
+ *     data-blurit-feature-header, data-blurit-feature-msgs (all "on" | "off").
+ *   - Per-element marks: data-blurit-role, data-blurit-selected.
+ *   - CSS custom properties on :root: --blurit-radius, --blurit-delay-in,
+ *     --blurit-delay-out, --blurit-transition.
+ *
+ * Why CSS does the heavy lifting: keying rules on WhatsApp's own structural
+ * selectors (#pane-side, [role="listitem"], #main, etc.) means the blur applies
+ * on the very first paint of a newly mounted (virtualized) node, before any
+ * MutationObserver callback runs — no flash-of-unblurred-content.
+ */
+
+:root {
+  --blurit-radius: 8px;
+  --blurit-delay-in: 200ms;
+  --blurit-delay-out: 0ms;
+  --blurit-transition: 120ms;
+}
+
+/* ─── Feature 1: chat list rows ──────────────────────────────────────────── */
+/* WhatsApp's chat rows are [role="row"][data-testid^="list-item-"] inside
+ * #pane-side. Selection is signalled by aria-selected="true" on a nested div,
+ * so :has() does the exclusion in pure CSS — no JS selected-row tracker.
+ * Requires Chrome 116+ (gated by minimum_chrome_version in manifest). */
+
+html[data-blurit-master='on'][data-blurit-feature-list='on']
+  #pane-side
+  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])) {
+  filter: blur(var(--blurit-radius));
+  transition: filter var(--blurit-transition) ease;
+  transition-delay: var(--blurit-delay-out);
+  contain: layout style;
+}
+
+html[data-blurit-master='on'][data-blurit-feature-list='on']
+  #pane-side
+  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])):hover {
+  filter: blur(0);
+  transition-delay: var(--blurit-delay-in);
+}
+
+/* ─── Feature 3: chat header (sibling-only, action buttons stay crisp) ───── */
+
+html[data-blurit-master='on'][data-blurit-feature-header='on']
+  #main header :where(:not(button):not([role='button']):not(svg):not(svg *)) {
+  filter: blur(var(--blurit-radius));
+  transition: filter var(--blurit-transition) ease;
+  transition-delay: var(--blurit-delay-out);
+}
+
+html[data-blurit-master='on'][data-blurit-feature-header='on']
+  #main header:hover :where(:not(button):not([role='button']):not(svg):not(svg *)) {
+  filter: blur(0);
+  transition-delay: var(--blurit-delay-in);
+}
+
+/* ─── Feature 2: message bubbles (rows wrap bubble + media + replies) ────── */
+
+html[data-blurit-master='on'][data-blurit-feature-msgs='on']
+  #main [role='row']:not([data-blurit-role='system']):not([data-blurit-role='date']) {
+  filter: blur(var(--blurit-radius));
+  transition: filter var(--blurit-transition) ease;
+  transition-delay: var(--blurit-delay-out);
+  contain: layout style;
+}
+
+html[data-blurit-master='on'][data-blurit-feature-msgs='on']
+  #main [role='row']:not([data-blurit-role='system']):not([data-blurit-role='date']):hover {
+  filter: blur(0);
+  transition-delay: var(--blurit-delay-in);
+}
+
+/* ─── Global no-blur guards (defensive, justifies the only !important) ───── */
+
+html[data-blurit-master='on'] [data-blurit-role='composer'],
+html[data-blurit-master='on'] #main footer,
+html[data-blurit-master='on'] #main footer * {
+  filter: none !important;
+}
+
+html[data-blurit-master='on'] #main header button,
+html[data-blurit-master='on'] #main header [role='button'] {
+  filter: none !important;
+}
+
+/* ─── Accessibility: respect reduced motion ──────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --blurit-transition: 0ms;
+  }
+  html[data-blurit-master='on'] #pane-side [role='row'],
+  html[data-blurit-master='on'] #main header *,
+  html[data-blurit-master='on'] #main [role='row'] {
+    transition: none !important;
+  }
+}
