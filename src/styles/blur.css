@@ -65,17 +65,16 @@ html[data-blurit-master='on'][data-blurit-feature-header='on']:not(
 html[data-blurit-master='on'][data-blurit-feature-msgs='on']:not(
     [data-blurit-current-whitelisted='on']
   )
-  #main [role='row']:not([data-blurit-role='system']):not([data-blurit-role='date']) {
+  #main [role='row'] [data-testid^='conv-msg-'] {
   filter: blur(var(--blurit-radius));
   transition: filter var(--blurit-transition) ease;
   transition-delay: var(--blurit-delay-out);
-  contain: layout style;
 }
 
 html[data-blurit-master='on'][data-blurit-feature-msgs='on']:not(
     [data-blurit-current-whitelisted='on']
   )
-  #main [role='row']:not([data-blurit-role='system']):not([data-blurit-role='date']):hover {
+  #main [role='row']:hover [data-testid^='conv-msg-'] {
   filter: blur(0);
   transition-delay: var(--blurit-delay-in);
 }
@@ -85,7 +84,7 @@ html[data-blurit-master='on'][data-blurit-feature-msgs='on']:not(
 html[data-blurit-master='on'][data-blurit-feature-msgs='on'][data-blurit-reveal-latest='on']:not(
     [data-blurit-current-whitelisted='on']
   )
-  #main [role='row'][data-blurit-latest='true'] {
+  #main [role='row'][data-blurit-latest='true'] [data-testid^='conv-msg-'] {
   filter: blur(0);
   transition-delay: 0ms;
 }
@@ -111,7 +110,7 @@ html[data-blurit-master='on'] #main header [role='button'] {
   }
   html[data-blurit-master='on'] #pane-side [role='row'],
   html[data-blurit-master='on'] #main header *,
-  html[data-blurit-master='on'] #main [role='row'] {
+  html[data-blurit-master='on'] #main [role='row'] [data-testid^='conv-msg-'] {
     transition: none !important;
   }
 }
