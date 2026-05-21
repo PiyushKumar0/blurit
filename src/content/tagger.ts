@@ -33,6 +33,66 @@ export function updateLatestMessage(): void {
   }
 }
 
+/**
+ * Whitelist state — updated by blur-engine when settings change.
+ * Names are lowercased for case-insensitive matching against [title] attrs.
+ */
+let activeWhitelist = new Set<string>();
+
+export function setWhitelist(names: string[]): void {
+  activeWhitelist = new Set(names.map((n) => n.trim().toLowerCase()));
+}
+
+export function tagWhitelistedRows(): void {
+  if (activeWhitelist.size === 0) {
+    for (const el of document.querySelectorAll(`#pane-side [${DATA_ATTRS.whitelisted}="true"]`)) {
+      el.removeAttribute(DATA_ATTRS.whitelisted);
+    }
+    return;
+  }
+
+  const rows = document.querySelectorAll('#pane-side [role="row"][data-testid^="list-item-"]');
+  for (const row of rows) {
+    const title = readChatName(row);
+    const isWhitelisted = title !== null && activeWhitelist.has(title.toLowerCase());
+    if (isWhitelisted) {
+      if (!row.hasAttribute(DATA_ATTRS.whitelisted)) {
+        row.setAttribute(DATA_ATTRS.whitelisted, 'true');
+      }
+    } else if (row.hasAttribute(DATA_ATTRS.whitelisted)) {
+      row.removeAttribute(DATA_ATTRS.whitelisted);
+    }
+  }
+}
+
+export function updateCurrentWhitelistedFlag(): void {
+  const root = document.documentElement;
+  let isWhitelisted = false;
+
+  if (activeWhitelist.size > 0) {
+    const selected = document.querySelector(
+      '#pane-side [role="row"][data-testid^="list-item-"]:has([aria-selected="true"])',
+    );
+    const title = selected ? readChatName(selected) : null;
+    isWhitelisted = title !== null && activeWhitelist.has(title.toLowerCase());
+  }
+
+  if (isWhitelisted) {
+    if (root.getAttribute(DATA_ATTRS.currentWhitelisted) !== 'on') {
+      root.setAttribute(DATA_ATTRS.currentWhitelisted, 'on');
+    }
+  } else if (root.hasAttribute(DATA_ATTRS.currentWhitelisted)) {
+    root.removeAttribute(DATA_ATTRS.currentWhitelisted);
+  }
+}
+
+function readChatName(row: Element): string | null {
+  // WhatsApp puts the contact name in a [title] span inside the row.
+  const titled = row.querySelector('[title]');
+  const t = titled?.getAttribute('title');
+  return t && t.trim() ? t.trim() : null;
+}
+
 function tagComposer(root: ParentNode): void {
   // Composer footer is the most safety-critical no-blur target. Walk first.
   const footers = root.querySelectorAll('#main footer');

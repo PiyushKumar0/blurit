@@ -21,6 +21,21 @@ const delay = $<HTMLInputElement>('delay');
 const delayVal = $<HTMLOutputElement>('delay-val');
 const shortcutKbd = $<HTMLElement>('shortcut');
 const rebind = $<HTMLAnchorElement>('rebind');
+const whitelistChips = $<HTMLDivElement>('whitelist-chips');
+const whitelistForm = $<HTMLFormElement>('whitelist-form');
+const whitelistInput = $<HTMLInputElement>('whitelist-input');
+const toast = $<HTMLDivElement>('toast');
+
+let toastTimer: number | undefined;
+function showError(message: string): void {
+  toast.textContent = message;
+  toast.classList.add('show');
+  if (toastTimer !== undefined) clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast.classList.remove('show');
+    toastTimer = undefined;
+  }, 3500);
+}
 
 function paint(settings: Awaited<ReturnType<typeof loadSettings>>): void {
   master.checked = settings.master;
@@ -37,7 +52,47 @@ function paint(settings: Awaited<ReturnType<typeof loadSettings>>): void {
   for (const input of [featureList, featureHeader, featureMsgs, revealLatest, radius, delay]) {
     input.disabled = disabled;
   }
+  renderWhitelist(settings.whitelist);
 }
+
+function renderWhitelist(names: string[]): void {
+  whitelistChips.replaceChildren();
+  for (const name of names) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    const label = document.createElement('span');
+    label.textContent = name;
+    label.title = name;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', `Remove ${name}`);
+    remove.addEventListener('click', () => {
+      updateWhitelist((current) => current.filter((n) => n !== name));
+    });
+    chip.append(label, remove);
+    whitelistChips.append(chip);
+  }
+}
+
+function updateWhitelist(compute: (current: string[]) => string[]): void {
+  updateSettings((current) => ({ whitelist: compute(current.whitelist) })).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('[BlurIt] whitelist save failed', err);
+    showError("Couldn't save the contact list. Try again.");
+  });
+}
+
+whitelistForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const raw = whitelistInput.value.trim();
+  if (!raw) return;
+  whitelistInput.value = '';
+  const lower = raw.toLowerCase();
+  updateWhitelist((current) =>
+    current.some((n) => n.toLowerCase() === lower) ? current : [...current, raw],
+  );
+});
 
 async function showCurrentShortcut(): Promise<void> {
   try {
@@ -59,6 +114,7 @@ function persist(patch: SettingsPatch): void {
   updateSettings(patch).catch((err) => {
     // eslint-disable-next-line no-console
     console.error('[BlurIt] save failed', err);
+    showError("Couldn't save settings. Try again.");
   });
 }
 

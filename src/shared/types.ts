@@ -10,6 +10,7 @@ export interface Settings {
   radiusPx: number;
   delayMs: number;
   revealLatest: boolean;
+  whitelist: string[];
 }
 
 export type SemanticRole =

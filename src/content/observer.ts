@@ -1,17 +1,31 @@
-import { tagSubtree, updateLatestMessage } from './tagger';
+import {
+  tagSubtree,
+  updateLatestMessage,
+  tagWhitelistedRows,
+  updateCurrentWhitelistedFlag,
+} from './tagger';
 
 /**
  * Single MutationObserver rooted at #app. Mutations coalesce into a
- * requestAnimationFrame flush to avoid layout thrash. The flush walks added
- * subtrees to stamp exclusion roles (composer, date separators). Selected-row
- * exclusion is done in CSS via :has([aria-selected="true"]) — no JS tracking
- * needed.
- *
- * Budget: target ≤ 4ms/frame on a 200-row list.
+ * requestAnimationFrame flush to avoid layout thrash, and are attributed to a
+ * pane (#main vs #pane-side) so each scanner only runs when its pane actually
+ * changed:
+ *   - latest-message scan         → only when #main changed
+ *   - whitelist row tagging (loop) → only when #pane-side changed
+ *   - current-chat whitelist flag  → either pane (cheap single query)
  */
 export function startObserver(appRoot: Element): MutationObserver {
   const addedSubtrees = new Set<Node>();
+  let mainTouched = false;
+  let paneSideTouched = false;
   let frameScheduled = false;
+
+  const markPanes = (node: Node) => {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node as Element;
+    if (!mainTouched && el.closest('#main')) mainTouched = true;
+    if (!paneSideTouched && el.closest('#pane-side')) paneSideTouched = true;
+  };
 
   const flush = () => {
     frameScheduled = false;
@@ -21,7 +35,13 @@ export function startObserver(appRoot: Element): MutationObserver {
       }
     }
     addedSubtrees.clear();
-    updateLatestMessage();
+
+    if (mainTouched) updateLatestMessage();
+    if (paneSideTouched) tagWhitelistedRows();
+    if (mainTouched || paneSideTouched) updateCurrentWhitelistedFlag();
+
+    mainTouched = false;
+    paneSideTouched = false;
   };
 
   const schedule = () => {
@@ -33,9 +53,13 @@ export function startObserver(appRoot: Element): MutationObserver {
   const observer = new MutationObserver((records) => {
     for (const rec of records) {
       if (rec.type !== 'childList') continue;
-      for (const node of rec.addedNodes) addedSubtrees.add(node);
+      markPanes(rec.target);
+      for (const node of rec.addedNodes) {
+        addedSubtrees.add(node);
+        markPanes(node);
+      }
     }
-    schedule();
+    if (mainTouched || paneSideTouched || addedSubtrees.size > 0) schedule();
   });
 
   observer.observe(appRoot, { childList: true, subtree: true });
@@ -43,6 +67,8 @@ export function startObserver(appRoot: Element): MutationObserver {
   // Initial sweep so anything mounted before we started gets tagged.
   tagSubtree(appRoot);
   updateLatestMessage();
+  tagWhitelistedRows();
+  updateCurrentWhitelistedFlag();
 
   return observer;
 }

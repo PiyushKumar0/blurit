@@ -70,12 +70,30 @@
       </label>
     </section>
 
+    <section class="group" aria-labelledby="whitelist-label">
+      <h2 id="whitelist-label">Never blur these contacts</h2>
+      <div id="whitelist-chips" class="chips" aria-live="polite"></div>
+      <form id="whitelist-form" class="add-row">
+        <input
+          type="text"
+          id="whitelist-input"
+          placeholder="Contact name"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="submit">Add</button>
+      </form>
+      <p class="hint-text">Exact match (case-insensitive) of the contact's display name.</p>
+    </section>
+
     <footer class="hint">
       <span>
         Shortcut: <kbd id="shortcut">Ctrl+Shift+B</kbd>
       </span>
       <a id="rebind" href="#">Rebind…</a>
     </footer>
+
+    <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
 
     <script type="module" src="./popup.ts"></script>
   </body>
