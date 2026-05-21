@@ -23,15 +23,11 @@
 
 /* ─── Feature 1: chat list rows ──────────────────────────────────────────── */
 /* WhatsApp's chat rows are [role="row"][data-testid^="list-item-"] inside
- * #pane-side. Selection is signalled by aria-selected="true" on a nested div,
- * so :has() does the exclusion in pure CSS — no JS selected-row tracker.
- * Requires Chrome 116+ (gated by minimum_chrome_version in manifest). */
+ * #pane-side. */
 
 html[data-blurit-master='on'][data-blurit-feature-list='on']
   #pane-side
-  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])):not(
-    [data-blurit-whitelisted='true']
-  ) {
+  [role='row'][data-testid^='list-item-']:not([data-blurit-whitelisted='true']) {
   filter: blur(var(--blurit-radius));
   transition: filter var(--blurit-transition) ease;
   transition-delay: var(--blurit-delay-out);
@@ -40,9 +36,7 @@ html[data-blurit-master='on'][data-blurit-feature-list='on']
 
 html[data-blurit-master='on'][data-blurit-feature-list='on']
   #pane-side
-  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])):not(
-    [data-blurit-whitelisted='true']
-  ):hover {
+  [role='row'][data-testid^='list-item-']:not([data-blurit-whitelisted='true']):hover {
   filter: blur(0);
   transition-delay: var(--blurit-delay-in);
 }
