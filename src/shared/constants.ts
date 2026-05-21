@@ -8,6 +8,8 @@ export const DATA_ATTRS = {
   revealLatest: 'data-blurit-reveal-latest',
   role: 'data-blurit-role',
   latest: 'data-blurit-latest',
+  whitelisted: 'data-blurit-whitelisted',
+  currentWhitelisted: 'data-blurit-current-whitelisted',
 } as const;
 
 export const CSS_VARS = {

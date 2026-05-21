@@ -1,5 +1,6 @@
 import type { Settings } from '../shared/types';
 import { CSS_VARS, DATA_ATTRS } from '../shared/constants';
+import { setWhitelist, tagWhitelistedRows, updateCurrentWhitelistedFlag } from './tagger';
 
 function flag(on: boolean): 'on' | 'off' {
   return on ? 'on' : 'off';
@@ -19,4 +20,7 @@ export function applySettings(settings: Settings): void {
   root.setAttribute(DATA_ATTRS.revealLatest, flag(settings.revealLatest));
   root.style.setProperty(CSS_VARS.radius, `${settings.radiusPx}px`);
   root.style.setProperty(CSS_VARS.delayIn, `${settings.delayMs}ms`);
+  setWhitelist(settings.whitelist);
+  tagWhitelistedRows();
+  updateCurrentWhitelistedFlag();
 }

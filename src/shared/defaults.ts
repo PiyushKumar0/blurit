@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS: Settings = {
   radiusPx: 8,
   delayMs: 200,
   revealLatest: false,
+  whitelist: [],
 };
 
 export const RADIUS_MIN = 4;

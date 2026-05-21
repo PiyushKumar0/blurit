@@ -30,7 +30,24 @@ function sanitize(raw: unknown): Settings {
     ),
     revealLatest:
       typeof s.revealLatest === 'boolean' ? s.revealLatest : DEFAULT_SETTINGS.revealLatest,
+    whitelist: sanitizeWhitelist(s.whitelist),
   };
+}
+
+function sanitizeWhitelist(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'string') continue;
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
 }
 
 export async function loadSettings(): Promise<Settings> {
@@ -46,14 +63,14 @@ export type SettingsPatch = Partial<Omit<Settings, 'features'>> & {
   features?: Partial<FeatureToggles>;
 };
 
-// Serialize writes through a single promise chain so concurrent callers
-// (popup handlers + service-worker shortcut) can't clobber each other with
-// stale read-modify-write cycles.
 let writeChain: Promise<unknown> = Promise.resolve();
 
-export function updateSettings(patch: SettingsPatch): Promise<Settings> {
+export function updateSettings(
+  patchOrFn: SettingsPatch | ((current: Settings) => SettingsPatch),
+): Promise<Settings> {
   const result = writeChain.then(async () => {
     const current = await loadSettings();
+    const patch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn;
     const merged: Settings = {
       ...current,
       ...patch,

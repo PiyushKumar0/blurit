@@ -29,7 +29,9 @@
 
 html[data-blurit-master='on'][data-blurit-feature-list='on']
   #pane-side
-  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])) {
+  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])):not(
+    [data-blurit-whitelisted='true']
+  ) {
   filter: blur(var(--blurit-radius));
   transition: filter var(--blurit-transition) ease;
   transition-delay: var(--blurit-delay-out);
@@ -38,21 +40,27 @@ html[data-blurit-master='on'][data-blurit-feature-list='on']
 
 html[data-blurit-master='on'][data-blurit-feature-list='on']
   #pane-side
-  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])):hover {
+  [role='row'][data-testid^='list-item-']:not(:has([aria-selected='true'])):not(
+    [data-blurit-whitelisted='true']
+  ):hover {
   filter: blur(0);
   transition-delay: var(--blurit-delay-in);
 }
 
 /* ─── Feature 2: chat header (sibling-only, action buttons stay crisp) ───── */
 
-html[data-blurit-master='on'][data-blurit-feature-header='on']
+html[data-blurit-master='on'][data-blurit-feature-header='on']:not(
+    [data-blurit-current-whitelisted='on']
+  )
   #main header :where(:not(button):not([role='button']):not(svg):not(svg *)) {
   filter: blur(var(--blurit-radius));
   transition: filter var(--blurit-transition) ease;
   transition-delay: var(--blurit-delay-out);
 }
 
-html[data-blurit-master='on'][data-blurit-feature-header='on']
+html[data-blurit-master='on'][data-blurit-feature-header='on']:not(
+    [data-blurit-current-whitelisted='on']
+  )
   #main header:hover :where(:not(button):not([role='button']):not(svg):not(svg *)) {
   filter: blur(0);
   transition-delay: var(--blurit-delay-in);
@@ -60,7 +68,9 @@ html[data-blurit-master='on'][data-blurit-feature-header='on']
 
 /* ─── Feature 3: message bubbles (rows wrap bubble + media + replies) ────── */
 
-html[data-blurit-master='on'][data-blurit-feature-msgs='on']
+html[data-blurit-master='on'][data-blurit-feature-msgs='on']:not(
+    [data-blurit-current-whitelisted='on']
+  )
   #main [role='row']:not([data-blurit-role='system']):not([data-blurit-role='date']) {
   filter: blur(var(--blurit-radius));
   transition: filter var(--blurit-transition) ease;
@@ -68,7 +78,9 @@ html[data-blurit-master='on'][data-blurit-feature-msgs='on']
   contain: layout style;
 }
 
-html[data-blurit-master='on'][data-blurit-feature-msgs='on']
+html[data-blurit-master='on'][data-blurit-feature-msgs='on']:not(
+    [data-blurit-current-whitelisted='on']
+  )
   #main [role='row']:not([data-blurit-role='system']):not([data-blurit-role='date']):hover {
   filter: blur(0);
   transition-delay: var(--blurit-delay-in);
