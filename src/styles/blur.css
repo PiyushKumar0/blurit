@@ -88,7 +88,9 @@ html[data-blurit-master='on'][data-blurit-feature-msgs='on']:not(
 
 /* ─── Feature 4: Show latest message ─────────────────────────────────────── */
 
-html[data-blurit-master='on'][data-blurit-feature-msgs='on'][data-blurit-reveal-latest='on']
+html[data-blurit-master='on'][data-blurit-feature-msgs='on'][data-blurit-reveal-latest='on']:not(
+    [data-blurit-current-whitelisted='on']
+  )
   #main [role='row'][data-blurit-latest='true'] {
   filter: blur(0);
   transition-delay: 0ms;
