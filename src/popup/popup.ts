@@ -150,6 +150,7 @@ if (supportsCommandsRebind) {
 }
 
 let capturing = false;
+let captureCommitting = false;
 let captureKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
 let captureErrorTimer: number | undefined;
 
@@ -167,9 +168,14 @@ function startCapture(): void {
 function stopCapture(): void {
   if (!capturing) return;
   capturing = false;
+  captureCommitting = false;
   if (captureKeydownHandler) {
     window.removeEventListener('keydown', captureKeydownHandler, true);
     captureKeydownHandler = null;
+  }
+  if (captureErrorTimer !== undefined) {
+    clearTimeout(captureErrorTimer);
+    captureErrorTimer = undefined;
   }
   captureBanner.hidden = true;
   captureBanner.classList.remove('error');
@@ -192,6 +198,10 @@ function handleCaptureKeydown(e: KeyboardEvent): void {
   e.preventDefault();
   e.stopPropagation();
 
+  // commands.update is async — drop keys arriving during the in-flight
+  // persist so OS key-repeat or fast typing can't queue a second binding.
+  if (captureCommitting) return;
+
   if (e.key === 'Escape') {
     stopCapture();
     return;
@@ -207,8 +217,8 @@ function handleCaptureKeydown(e: KeyboardEvent): void {
     return;
   }
 
-  const shortcut = built.shortcut;
-  void persistShortcut(shortcut);
+  captureCommitting = true;
+  void persistShortcut(built.shortcut);
 }
 
 type ShortcutResult = { ok: true; shortcut: string } | { ok: false; error: string };
@@ -232,17 +242,23 @@ function buildShortcut(e: KeyboardEvent): ShortcutResult {
     return { ok: false, error: 'Unsupported key — try a letter, digit, or function key' };
   }
 
-  // Firefox rule (Windows/Linux): must contain Ctrl or Alt. Shift alone is
-  // accepted only for a tiny allowlist (Shift+F1..F12 etc.). We allow it but
-  // let the API surface a clearer error if Firefox rejects the combo.
-  const hasPrimary = IS_MAC
-    ? modifiers.includes('Command') || modifiers.includes('MacCtrl')
-    : modifiers.includes('Ctrl') || modifiers.includes('Alt');
-  if (!hasPrimary) {
-    return {
-      ok: false,
-      error: IS_MAC ? 'Need Command or Control' : 'Need Ctrl or Alt',
-    };
+  // Firefox accepts media keys and function keys as standalone shortcuts
+  // (no modifier required). Everything else needs Ctrl or Alt — or
+  // Command/MacCtrl on macOS. Edge cases (Shift+Fn, F13–F19 standalone)
+  // defer to commands.update, which surfaces a clearer error than we can
+  // synthesize.
+  const isStandaloneOk =
+    mainKey.startsWith('Media') || /^F([1-9]|1[0-9])$/.test(mainKey);
+  if (!isStandaloneOk) {
+    const hasPrimary = IS_MAC
+      ? modifiers.includes('Command') || modifiers.includes('MacCtrl')
+      : modifiers.includes('Ctrl') || modifiers.includes('Alt');
+    if (!hasPrimary) {
+      return {
+        ok: false,
+        error: IS_MAC ? 'Need Command or Control' : 'Need Ctrl or Alt',
+      };
+    }
   }
 
   return { ok: true, shortcut: [...modifiers, mainKey].join('+') };
@@ -302,6 +318,8 @@ async function persistShortcut(shortcut: string): Promise<void> {
     console.error('[BlurIt] commands.update failed', err);
     const msg = err instanceof Error ? err.message : 'Could not bind shortcut';
     showCaptureError(msg);
+    // Reopen the listener so the user can try a different combo.
+    captureCommitting = false;
   }
 }
 

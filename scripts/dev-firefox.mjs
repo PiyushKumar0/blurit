@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const DIST = join(ROOT, 'dist');
-const DIST_MANIFEST = join(DIST, 'manifest.json');
+const DIST_FIREFOX_MANIFEST = join(ROOT, 'dist-firefox', 'manifest.json');
 const TRANSFORM = join(__dirname, 'transform-firefox.mjs');
 
 const IS_WIN = process.platform === 'win32';
@@ -89,6 +89,10 @@ function scheduleTransform() {
     transformRunning = true;
     try {
       await runTransform();
+      // transform-firefox.mjs exits 0 even on the quiet-bail path (when
+      // dist/manifest.json isn't ready yet), so check for the output
+      // manifest instead of trusting the exit code.
+      if (existsSync(DIST_FIREFOX_MANIFEST)) startWebExtOnce();
     } catch (err) {
       console.error('[dev:firefox] transform failed:', err);
     } finally {
@@ -98,7 +102,7 @@ function scheduleTransform() {
         scheduleTransform();
       }
     }
-  }, 50);
+  }, 200);
 }
 
 function watchDist() {
@@ -107,9 +111,14 @@ function watchDist() {
     setTimeout(watchDist, 500);
     return;
   }
-  // Watching the manifest mtime is enough: vite rewrites it on every full
-  // rebuild after asset emission. Saves us walking the tree.
-  watch(DIST_MANIFEST, { persistent: true }, () => scheduleTransform());
+  // Watch the directory, not the file: vite's emptyOutDir unlinks
+  // manifest.json before rewriting it, and fs.watch on a file is bound
+  // to its inode — the watcher silently stops firing after the first
+  // rebuild on Linux/macOS. Filename is null on some platforms, so fall
+  // through to schedule unconditionally; the transform is debounced.
+  watch(DIST, { persistent: true }, (_event, filename) => {
+    if (!filename || filename === 'manifest.json') scheduleTransform();
+  });
 }
 
 function shutdown(signal) {
@@ -123,25 +132,34 @@ function shutdown(signal) {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-// 1. vite watch-build → writes dist/
-spawnTracked(NPX, ['vite', 'build', '--watch']);
-
-// 2. dist-side watcher → transform → dist-firefox/
-watchDist();
-
-// 3. web-ext run reloads on dist-firefox/ changes
+// web-ext run reloads on dist-firefox/ changes.
+//
+// Spawned lazily after the first successful transform — on a clean
+// checkout dist-firefox/ doesn't exist yet, and web-ext exits immediately
+// if --source-dir is missing at launch.
 //
 // Honour FIREFOX_BINARY for installs outside the standard discovery paths
 // (e.g. %LOCALAPPDATA%\Mozilla Firefox on Windows). When unset, web-ext's
 // built-in discovery handles Program Files / Program Files (x86) / homebrew.
-const webExtArgs = [
-  'web-ext',
-  'run',
-  '--source-dir=dist-firefox',
-  '--target=firefox-desktop',
-  '--start-url=https://web.whatsapp.com',
-];
-if (process.env.FIREFOX_BINARY) {
-  webExtArgs.push(`--firefox=${process.env.FIREFOX_BINARY}`);
+let webExtStarted = false;
+function startWebExtOnce() {
+  if (webExtStarted) return;
+  webExtStarted = true;
+  const webExtArgs = [
+    'web-ext',
+    'run',
+    '--source-dir=dist-firefox',
+    '--target=firefox-desktop',
+    '--start-url=https://web.whatsapp.com',
+  ];
+  if (process.env.FIREFOX_BINARY) {
+    webExtArgs.push(`--firefox=${process.env.FIREFOX_BINARY}`);
+  }
+  spawnTracked(NPX, webExtArgs);
 }
-spawnTracked(NPX, webExtArgs);
+
+// 1. vite watch-build → writes dist/
+spawnTracked(NPX, ['vite', 'build', '--watch']);
+
+// 2. dist-side watcher → transform → dist-firefox/ → starts web-ext on first success
+watchDist();
