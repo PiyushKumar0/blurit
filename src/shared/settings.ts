@@ -1,6 +1,7 @@
 import type { FeatureToggles, Settings } from './types';
 import { DEFAULT_SETTINGS, RADIUS_MAX, RADIUS_MIN, DELAY_MAX, DELAY_MIN } from './defaults';
 import { STORAGE_KEY } from './constants';
+import api from './browser-api';
 
 function clamp(n: number, min: number, max: number): number {
   if (Number.isNaN(n)) return min;
@@ -51,12 +52,12 @@ function sanitizeWhitelist(raw: unknown): string[] {
 }
 
 export async function loadSettings(): Promise<Settings> {
-  const stored = await chrome.storage.sync.get(STORAGE_KEY);
+  const stored = await api.storage.sync.get(STORAGE_KEY);
   return sanitize(stored[STORAGE_KEY]);
 }
 
 export async function saveSettings(next: Settings): Promise<void> {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: sanitize(next) });
+  await api.storage.sync.set({ [STORAGE_KEY]: sanitize(next) });
 }
 
 export type SettingsPatch = Partial<Omit<Settings, 'features'>> & {
@@ -98,6 +99,6 @@ export function onSettingsChanged(listener: SettingsListener): () => void {
     const prev = sanitize(change.oldValue);
     listener(next, prev);
   };
-  chrome.storage.onChanged.addListener(handler);
-  return () => chrome.storage.onChanged.removeListener(handler);
+  api.storage.onChanged.addListener(handler);
+  return () => api.storage.onChanged.removeListener(handler);
 }

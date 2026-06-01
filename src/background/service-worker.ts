@@ -1,7 +1,8 @@
 import { COMMAND_TOGGLE_MASTER } from '../shared/constants';
 import { loadSettings, updateSettings } from '../shared/settings';
+import api from '../shared/browser-api';
 
-chrome.commands.onCommand.addListener(async (command) => {
+api.commands.onCommand.addListener(async (command) => {
   if (command !== COMMAND_TOGGLE_MASTER) return;
   try {
     const current = await loadSettings();

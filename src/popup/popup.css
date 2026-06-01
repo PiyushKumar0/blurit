@@ -305,3 +305,71 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* ─── Firefox rebind UI (hidden on Chrome via supportsCommandsRebind) ─── */
+
+.shortcut-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hint-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rebind-reset {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.rebind-reset:hover {
+  color: var(--fg);
+  background: var(--row-hover);
+}
+.rebind-reset:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The `[hidden]` HTML attribute sets `display: none` via the UA stylesheet,
+ * but author rules that set `display` directly override it. Gate the
+ * display rule on `:not([hidden])` so the banner stays hidden at rest on
+ * both browsers — only shown once startCapture() unhides it. */
+.capture-banner {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  background: var(--row-hover);
+  font-size: 11px;
+  color: var(--fg);
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+.capture-banner:not([hidden]) {
+  display: flex;
+}
+.capture-banner .capture-msg {
+  font-weight: 500;
+}
+.capture-banner .capture-hint {
+  color: var(--muted);
+  font-size: 10px;
+}
+.capture-banner.error {
+  border-style: solid;
+  border-color: #b3261e;
+}
+.capture-banner.error .capture-msg {
+  color: #b3261e;
+}
