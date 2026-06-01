@@ -87,11 +87,20 @@
     </section>
 
     <footer class="hint">
-      <span>
-        Shortcut: <kbd id="shortcut">Ctrl+Shift+B</kbd>
+      <span class="shortcut-line">
+        Shortcut:
+        <kbd id="shortcut">Ctrl+Shift+B</kbd>
       </span>
-      <a id="rebind" href="#">Rebind…</a>
+      <span class="hint-actions">
+        <a id="rebind" href="#">Rebind…</a>
+        <button type="button" id="rebind-reset" class="rebind-reset" hidden>Reset</button>
+      </span>
     </footer>
+
+    <div id="capture-banner" class="capture-banner" hidden role="status" aria-live="polite">
+      <span class="capture-msg">Press a shortcut…</span>
+      <span class="capture-hint">Esc to cancel</span>
+    </div>
 
     <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
 

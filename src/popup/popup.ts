@@ -1,6 +1,7 @@
 import { loadSettings, onSettingsChanged, updateSettings } from '../shared/settings';
 import type { SettingsPatch } from '../shared/settings';
 import { COMMAND_TOGGLE_MASTER } from '../shared/constants';
+import api, { supportsCommandsRebind } from '../shared/browser-api';
 
 type El<T extends HTMLElement = HTMLElement> = T;
 
@@ -21,6 +22,9 @@ const delay = $<HTMLInputElement>('delay');
 const delayVal = $<HTMLOutputElement>('delay-val');
 const shortcutKbd = $<HTMLElement>('shortcut');
 const rebind = $<HTMLAnchorElement>('rebind');
+const rebindReset = $<HTMLButtonElement>('rebind-reset');
+const captureBanner = $<HTMLDivElement>('capture-banner');
+const captureMsg = captureBanner.querySelector<HTMLSpanElement>('.capture-msg')!;
 const whitelistChips = $<HTMLDivElement>('whitelist-chips');
 const whitelistForm = $<HTMLFormElement>('whitelist-form');
 const whitelistInput = $<HTMLInputElement>('whitelist-input');
@@ -96,7 +100,7 @@ whitelistForm.addEventListener('submit', (e) => {
 
 async function showCurrentShortcut(): Promise<void> {
   try {
-    const commands = await chrome.commands.getAll();
+    const commands = await api.commands.getAll();
     const cmd = commands.find((c) => c.name === COMMAND_TOGGLE_MASTER);
     if (cmd?.shortcut) shortcutKbd.textContent = cmd.shortcut;
     else shortcutKbd.textContent = 'unbound';
@@ -105,10 +109,230 @@ async function showCurrentShortcut(): Promise<void> {
   }
 }
 
-rebind.addEventListener('click', (e) => {
+// ─── Rebind UI ─────────────────────────────────────────────────────────────
+//
+// On Chrome the only option is to open the manage-shortcuts page (there's no
+// runtime API for it). On Firefox we have commands.update / commands.reset,
+// so an inline keystroke-capture flow lives in the popup instead.
+//
+// Visibility is driven by `supportsCommandsRebind`, a runtime check rather
+// than a build flag so the same code ships to both engines.
+
+// navigator.platform is deprecated; the modern read uses userAgentData when
+// present (Chromium 90+) and falls back to userAgent everywhere else (Firefox
+// doesn't ship userAgentData yet but exposes 'Mac' in its UA on macOS).
+const IS_MAC = (() => {
+  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } })
+    .userAgentData;
+  if (uaData?.platform) return uaData.platform === 'macOS';
+  return /Mac/i.test(navigator.userAgent);
+})();
+
+if (supportsCommandsRebind) {
+  // Firefox: "Rebind…" link launches the in-popup keystroke-capture flow.
+  // A small "Reset" button appears next to it for reverting to the default.
+  // No separate pencil button: the link is already labelled for the action.
+  rebindReset.hidden = false;
+  rebind.addEventListener('click', (e) => {
+    e.preventDefault();
+    startCapture();
+  });
+  rebindReset.addEventListener('click', () => {
+    void resetShortcut();
+  });
+} else {
+  // Chrome: the runtime exposes no commands.update / commands.reset, so the
+  // best we can do is open the dedicated shortcuts manager page.
+  rebind.addEventListener('click', (e) => {
+    e.preventDefault();
+    api.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  });
+}
+
+let capturing = false;
+let captureCommitting = false;
+let captureKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
+let captureErrorTimer: number | undefined;
+
+function startCapture(): void {
+  if (capturing) return;
+  capturing = true;
+  captureBanner.classList.remove('error');
+  captureMsg.textContent = 'Press a shortcut…';
+  captureBanner.hidden = false;
+  captureKeydownHandler = (e) => handleCaptureKeydown(e);
+  // capture phase so we beat any other popup-level handlers.
+  window.addEventListener('keydown', captureKeydownHandler, true);
+}
+
+function stopCapture(): void {
+  if (!capturing) return;
+  capturing = false;
+  captureCommitting = false;
+  if (captureKeydownHandler) {
+    window.removeEventListener('keydown', captureKeydownHandler, true);
+    captureKeydownHandler = null;
+  }
+  if (captureErrorTimer !== undefined) {
+    clearTimeout(captureErrorTimer);
+    captureErrorTimer = undefined;
+  }
+  captureBanner.hidden = true;
+  captureBanner.classList.remove('error');
+}
+
+function showCaptureError(msg: string): void {
+  captureBanner.classList.add('error');
+  captureMsg.textContent = msg;
+  if (captureErrorTimer !== undefined) clearTimeout(captureErrorTimer);
+  captureErrorTimer = window.setTimeout(() => {
+    captureErrorTimer = undefined;
+    if (capturing) {
+      captureBanner.classList.remove('error');
+      captureMsg.textContent = 'Press a shortcut…';
+    }
+  }, 2200);
+}
+
+function handleCaptureKeydown(e: KeyboardEvent): void {
   e.preventDefault();
-  chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-});
+  e.stopPropagation();
+
+  // commands.update is async — drop keys arriving during the in-flight
+  // persist so OS key-repeat or fast typing can't queue a second binding.
+  if (captureCommitting) return;
+
+  if (e.key === 'Escape') {
+    stopCapture();
+    return;
+  }
+
+  // Ignore lone modifier presses — wait for the user to commit to a
+  // non-modifier key.
+  if (isModifierKey(e.key)) return;
+
+  const built = buildShortcut(e);
+  if (!built.ok) {
+    showCaptureError(built.error);
+    return;
+  }
+
+  captureCommitting = true;
+  void persistShortcut(built.shortcut);
+}
+
+type ShortcutResult = { ok: true; shortcut: string } | { ok: false; error: string };
+
+function buildShortcut(e: KeyboardEvent): ShortcutResult {
+  const modifiers: string[] = [];
+  // Order matters: Firefox expects modifiers before the key, joined by '+'.
+  // On macOS, MacCtrl maps to Control, Command to ⌘. Firefox accepts either
+  // Ctrl or Command as the primary modifier; we prefer Command on Mac.
+  if (IS_MAC) {
+    if (e.metaKey) modifiers.push('Command');
+    if (e.ctrlKey) modifiers.push('MacCtrl');
+  } else if (e.ctrlKey) {
+    modifiers.push('Ctrl');
+  }
+  if (e.altKey) modifiers.push('Alt');
+  if (e.shiftKey) modifiers.push('Shift');
+
+  const mainKey = normaliseKey(e);
+  if (!mainKey) {
+    return { ok: false, error: 'Unsupported key — try a letter, digit, or function key' };
+  }
+
+  // Firefox accepts media keys and function keys as standalone shortcuts
+  // (no modifier required). Everything else needs Ctrl or Alt — or
+  // Command/MacCtrl on macOS. Edge cases (Shift+Fn, F13–F19 standalone)
+  // defer to commands.update, which surfaces a clearer error than we can
+  // synthesize.
+  const isStandaloneOk =
+    mainKey.startsWith('Media') || /^F([1-9]|1[0-9])$/.test(mainKey);
+  if (!isStandaloneOk) {
+    const hasPrimary = IS_MAC
+      ? modifiers.includes('Command') || modifiers.includes('MacCtrl')
+      : modifiers.includes('Ctrl') || modifiers.includes('Alt');
+    if (!hasPrimary) {
+      return {
+        ok: false,
+        error: IS_MAC ? 'Need Command or Control' : 'Need Ctrl or Alt',
+      };
+    }
+  }
+
+  return { ok: true, shortcut: [...modifiers, mainKey].join('+') };
+}
+
+function isModifierKey(key: string): boolean {
+  return (
+    key === 'Control' ||
+    key === 'Shift' ||
+    key === 'Alt' ||
+    key === 'Meta' ||
+    key === 'OS' ||
+    key === 'AltGraph'
+  );
+}
+
+function normaliseKey(e: KeyboardEvent): string | null {
+  // Firefox's allowed-key list: A-Z, 0-9, F1-F19, plus a named-key set.
+  // Mapping is done off e.code where stable (KeyA, Digit1) with fallbacks
+  // off e.key for named keys whose `code` is implementation-defined.
+  const code = e.code;
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  if (/^F([1-9]|1[0-9])$/.test(code)) return code;
+
+  const named: Record<string, string> = {
+    Comma: 'Comma',
+    Period: 'Period',
+    Home: 'Home',
+    End: 'End',
+    PageUp: 'PageUp',
+    PageDown: 'PageDown',
+    Space: 'Space',
+    Insert: 'Insert',
+    Delete: 'Delete',
+    Tab: 'Tab',
+    ArrowUp: 'Up',
+    ArrowDown: 'Down',
+    ArrowLeft: 'Left',
+    ArrowRight: 'Right',
+    MediaTrackNext: 'MediaNextTrack',
+    MediaTrackPrevious: 'MediaPrevTrack',
+    MediaPlayPause: 'MediaPlayPause',
+    MediaStop: 'MediaStop',
+  };
+  return named[code] ?? null;
+}
+
+async function persistShortcut(shortcut: string): Promise<void> {
+  try {
+    await api.commands.update({ name: COMMAND_TOGGLE_MASTER, shortcut });
+    // Race-safe: re-read from the engine rather than trusting our string.
+    await showCurrentShortcut();
+    stopCapture();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[BlurIt] commands.update failed', err);
+    const msg = err instanceof Error ? err.message : 'Could not bind shortcut';
+    showCaptureError(msg);
+    // Reopen the listener so the user can try a different combo.
+    captureCommitting = false;
+  }
+}
+
+async function resetShortcut(): Promise<void> {
+  try {
+    await api.commands.reset(COMMAND_TOGGLE_MASTER);
+    await showCurrentShortcut();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[BlurIt] commands.reset failed', err);
+    showError("Couldn't reset shortcut. Try again.");
+  }
+}
 
 function persist(patch: SettingsPatch): void {
   updateSettings(patch).catch((err) => {
