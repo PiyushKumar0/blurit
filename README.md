@@ -1,173 +1,337 @@
-# BlurIt — WhatsApp Web Privacy Blur
+# BlurIt
 
-Browser extension (Chrome + Firefox) that selectively blurs sensitive UI on `https://web.whatsapp.com` and reveals it on cursor hover. Four independent features, all CSS-driven for performance: chat list rows, chat header, message bubbles, and reveal-latest-message. Plus a per-contact whitelist that skips blur for low-sensitivity chats.
+**A privacy layer for WhatsApp Web.** Blurs sensitive parts of the page until you hover over them, so the people sitting next to you (or watching your screen-share) can't read your chats.
 
-One source tree (`src/`) ships to both browsers. The Firefox build is a small post-processing transform on top of the Chrome build — same content scripts, same selectors, same CSS — so WhatsApp UI churn is fixed once, not twice.
+Works on **Chrome**, **Edge**, and **Firefox**.
 
 ---
 
-## Install (dev)
+## Why BlurIt?
+
+You're in a café. On a Zoom call sharing your screen. Or in an open-plan office. WhatsApp Web is open in another tab — and anyone who glances over can read everything: who's messaging you, what they said, the photos they sent.
+
+BlurIt fixes that. It softly blurs three sensitive areas of WhatsApp Web until you intentionally hover them with your cursor. **You** can still read your chats. **Everyone else** sees only fuzz.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ░░░░░░░░░░░░░  WhatsApp                ●  📞  ⋮    │
+├────────────────────┬────────────────────────────────┤
+│ ░░░░░░░░ ░░       │  ░░░░░░░░░░░░░░░  (chat header) │
+│ ░░░░░░░░░░ ░░░    ├─────────────────────────────────┤
+│ ░░░░░ ░░░         │                                 │
+│ ░░░░░░░░ ░░░░░    │   ░░░░░░░░░░░░░░░░░░░           │
+│ ░░ ░░░░░░ ░░░     │   ░░░░░░░░░░░░░░ ░░░░           │
+│   (chat list)     │   ░░░░░░░░ ░░░░░░░░░░░░         │
+│                   │                                 │
+│                   │   ░░░░░░░░░░░░░░░░░░            │
+│                   │   ░░░░░ ░░░░░░░                 │
+│                   │  (messages)                     │
+│                   ├─────────────────────────────────┤
+│                   │Type a message... (never blurred)│
+└───────────────────┴─────────────────────────────────┘
+```
+
+Hover anywhere on a blurred row → it un-blurs after a moment. Move your mouse away → it re-blurs instantly.
+
+---
+
+## What it blurs
+
+| Area | What you'd otherwise expose |
+|---|---|
+| **Chat list** (the left pane) | Names of every person you talk to + a preview of their latest message |
+| **Chat header** (the top bar) | The contact's **name** and **profile picture** at the top of the open conversation |
+| **Message bubbles** (the conversation) | Every message you've sent and received, plus media, voice notes, replies, and link previews |
+
+Each can be turned on or off independently.
+
+## What it *doesn't* blur
+
+So the extension stays useful:
+
+- The **text box** where you type your reply
+- The **status line** under the contact's name in the header ("online", "typing…", "last seen…") — it's a useful presence cue and reveals little on its own
+- The **call / video / search / menu** buttons in the chat header — so you can still click them
+- **Date separators** ("Today", "Yesterday") and the end-to-end encryption notice — no private info
+- The chat you currently have **open** in the list — so you know which conversation you're in
+
+---
+
+## Features
+
+- **Hover to reveal.** Blurred by default. Move your cursor over an area to un-blur it.
+- **Master switch.** One toggle (or a keyboard shortcut) to turn everything off when you don't need it.
+- **Independent toggles.** Blur chat list / chat header / messages on or off separately.
+- **Whitelist contacts.** Pick contacts whose conversations should never be blurred (e.g. delivery bots, news feeds, your own notes).
+- **Always show latest message.** *Optional.* Keeps the most recent message in the open chat visible at all times, while blurring everything above it — so you don't miss new replies without un-blurring the history.
+- **Adjustable blur intensity.** Slide between subtle (4px) and unreadable (16px).
+- **Adjustable reveal delay.** Tune how patient you want to be (0–500ms) before a hover reveals.
+- **Keyboard shortcut.** Toggle master on/off without opening the popup.
+- **Syncs across your devices.** Settings travel with your browser account.
+- **Zero data collection.** No network calls. No analytics. No tracking. Ever.
+
+---
+
+## Quick start
+
+### Step 1 — Build the extension
+
+Open a terminal in this folder and run:
 
 ```
 npm install
-```
-
-Then follow whichever browser you're targeting:
-
-### Chrome (or Edge)
-
-```
-npm run dev
-```
-
-Then in Chrome:
-1. Open `chrome://extensions`.
-2. Enable **Developer mode** (top-right).
-3. Click **Load unpacked** and pick the `dist/` directory.
-4. Open `https://web.whatsapp.com` — blur applies after `#app` mounts.
-
-`npm run dev` keeps `dist/` rebuilt; the content script hot-reloads via `@crxjs/vite-plugin`. Edits to `manifest.config.ts` require clicking the reload arrow on `chrome://extensions` because Chrome reads the manifest only at extension load.
-
-### Firefox
-
-```
-npm run dev:firefox
-```
-
-This orchestrates `vite build --watch` → `scripts/transform-firefox.mjs` → `web-ext run`. A temporary Firefox profile is spawned with the extension already loaded and `web.whatsapp.com` opened. The extension auto-reloads when source files change.
-
-If you'd rather load manually:
-```
 npm run build
 ```
-then in Firefox:
-1. Open `about:debugging`.
-2. Click **This Firefox** → **Load Temporary Add-on…**.
-3. Pick `dist-firefox/manifest.json`.
 
-Firefox 140+ desktop is required (matches the `data_collection_permissions` schema key Mozilla now mandates — see `scripts/transform-firefox.mjs`).
+That gives you two folders:
+
+- `dist/` — for Chrome and Edge
+- `dist-firefox/` — for Firefox
+
+### Step 2 — Load it into your browser
+
+<details open>
+<summary><b>Chrome or Edge</b></summary>
+
+1. Open a new tab and go to **`chrome://extensions`** (or `edge://extensions`)
+2. Turn on **Developer mode** (toggle in the top-right corner)
+3. Click **Load unpacked**
+4. Pick the **`dist`** folder from this project
+
+</details>
+
+<details>
+<summary><b>Firefox</b> (requires Firefox 140 or later)</summary>
+
+1. Open a new tab and go to **`about:debugging`**
+2. Click **This Firefox** in the left sidebar
+3. Click **Load Temporary Add-on…**
+4. Navigate into **`dist-firefox`** and pick **`manifest.json`**
+
+> Firefox unloads temporary add-ons when you close the browser. To use BlurIt again next time, repeat the load step. *(This is how Firefox handles unsigned extensions — not specific to BlurIt.)*
+
+</details>
+
+### Step 3 — Open WhatsApp
+
+Go to **`https://web.whatsapp.com`** and log in. Blur applies as soon as the page loads.
+
+That's it.
 
 ---
 
-## Build for stores
+## How to use it
+
+Click the **BlurIt icon** in your browser toolbar to open the settings popup. Here's what each control does:
 
 ```
-npm run build       # Chrome → dist/, Firefox → dist-firefox/
-npm run zip         # dist/ → blurit-v<v>.zip + web-ext-artifacts/blurit-<v>.zip
+╔══════════════════════════════╗
+║  BlurIt              ▢━━●    ║   ← master switch
+╠══════════════════════════════╣
+║  FEATURES                    ║
+║  Blur chat list      ▢━━●    ║   ← independent toggles
+║  Blur chat header    ▢━━●    ║
+║  Blur messages       ▢━━●    ║
+║    Always show       ●━━▢    ║   ← reveals just the bottom message
+║    latest message            ║
+╠══════════════════════════════╣
+║  TUNING                      ║
+║  Blur intensity              ║
+║    ●━━━━━━━━━━━━━━━━━━━━ 8px ║   ← slide left (subtler) or right (heavier)
+║  Reveal delay                ║
+║    ━━━●━━━━━━━━━━━━━━━ 200ms ║   ← how long to hover before un-blurring
+╠══════════════════════════════╣
+║  NEVER BLUR THESE CONTACTS   ║
+║  [Mom ✕] [Order Bot ✕]       ║   ← per-contact whitelist
+║  Contact name…       [Add]   ║
+╠══════════════════════════════╣
+║  Shortcut: Ctrl+Shift+B      ║
+║                  Rebind…     ║
+╚══════════════════════════════╝
 ```
 
-Or per-target:
+### Keyboard shortcut
 
-```
-npm run build:chrome      # dist/
-npm run build:firefox     # dist-firefox/ (assumes dist/ exists)
-npm run zip:chrome        # Chrome Web Store
-npm run zip:firefox       # AMO sideload (no signing — compatibility only)
-```
+Toggle the master switch without opening the popup:
 
-`npm run lint:firefox` runs `web-ext lint` against `dist-firefox/` — must stay at zero errors and zero warnings before shipping.
-
-AMO publication (signing, listing, source upload, privacy policy) is **out of scope** for this repo; the Firefox build is for sideload + local distribution. The `gecko.id` is a stable UUID, committed in `scripts/transform-firefox.mjs`.
-
----
-
-## Keyboard shortcut
-
-| Browser | Default | Rebind |
+| Browser | Default shortcut | How to change it |
 |---|---|---|
-| Chrome | `Ctrl+Shift+B` (Mac: `Cmd+Shift+B`) | Popup → "Rebind…" → `chrome://extensions/shortcuts` |
-| Firefox | `Ctrl+Shift+L` (Mac: `Cmd+Shift+L`) | Popup → pencil icon → press the new shortcut directly |
+| Chrome / Edge | `Ctrl+Shift+B` (Mac: `⌘+Shift+B`) | Popup → **Rebind…** → opens the browser's shortcuts page |
+| Firefox | `Ctrl+Shift+L` (Mac: `⌘+Shift+L`) | Popup → **Rebind…** → press your new combo directly |
 
-`Ctrl+Shift+B` is taken on Firefox (Bookmarks Toolbar), so the Firefox default uses `L` instead.
+> Firefox uses `L` instead of `B` because `Ctrl+Shift+B` already opens the Bookmarks Toolbar in Firefox.
 
-Firefox lets you rebind in-popup via `commands.update()` — Chrome doesn't expose this API, so the popup falls back to the manage-shortcuts page. The same source code drives both via a runtime `supportsCommandsRebind` capability flag.
+### Whitelist
 
----
+Add a contact by typing their name exactly as it appears in WhatsApp (case doesn't matter). When that conversation is open, the messages and header won't be blurred. The contact's row in the chat list is also kept clear so you can find it easily.
 
-## Settings
+Remove a contact by clicking the **✕** next to their name in the popup.
 
-All settings sync via `chrome.storage.sync` (also written `browser.storage.sync` on Firefox):
+### "Always show latest message"
 
-- Master on/off
-- Per-feature toggles: blur chat list / chat header / messages
-- Always show latest message (reveals the bottom-most bubble in the open conversation)
-- Blur intensity (4–16 px, default 8)
-- Hover reveal delay (0–500 ms, default 200)
-- Per-contact whitelist (exact case-insensitive match against the contact's display name)
-
-Settings persist across sessions and devices signed into the same browser sync account.
+Turn this on if you don't want to keep hovering just to check whether you got a new message. The bottom-most bubble in the conversation stays unblurred. Everything above stays blurred until you hover.
 
 ---
 
-## How it works (one paragraph)
+## Frequently asked questions
 
-The content script sets a few `data-*` attributes on `<html>` plus a couple of CSS custom properties (`--blurit-radius`, `--blurit-delay-in`). All actual blurring is done by static rules in `src/styles/blur.css` keyed off WhatsApp's own structural selectors (`#pane-side [role="row"][data-testid^="list-item-"]`, `#main [role="row"]`, `#main header`). Because the CSS rules don't depend on JS having tagged anything, a newly mounted (virtualized) chat row is blurred on its very first paint — no flash of unblurred content. A single `MutationObserver` rooted at `#app`, debounced via `requestAnimationFrame`, walks freshly mounted subtrees only to stamp `data-blurit-role` exclusions on the composer footer and date-separator rows, mark the latest message, and apply the whitelist.
+<details>
+<summary><b>Does BlurIt read my messages?</b></summary>
+
+No. BlurIt only adds CSS classes to the page. It never reads the actual message text, contact names, or media. Nothing is sent anywhere.
+
+</details>
+
+<details>
+<summary><b>Does it work in WhatsApp's dark mode?</b></summary>
+
+Yes. The blur happens at the pixel level, so it works in both light and dark themes without any extra configuration.
+
+</details>
+
+<details>
+<summary><b>Can people with screen-recording software still see my messages?</b></summary>
+
+Yes — the blur is purely visual. BlurIt protects you from people glancing at your screen, not from software running on your computer. See [Privacy and security](#privacy-and-security) below.
+
+</details>
+
+<details>
+<summary><b>Will my settings sync to my other computers?</b></summary>
+
+Yes — through your Chrome or Firefox account sync. No external server is involved; BlurIt simply uses your browser's built-in sync.
+
+</details>
+
+<details>
+<summary><b>The blur stopped working after a WhatsApp update. What do I do?</b></summary>
+
+WhatsApp occasionally ships UI changes that move the elements BlurIt targets. The fix is usually a one-line change to `src/shared/selectors.ts`. Open an issue and it'll be patched.
+
+</details>
+
+<details>
+<summary><b>Why aren't there any blurring effects on the message I'm typing?</b></summary>
+
+By design. The text box where you type your reply is never blurred — otherwise you couldn't read what you were typing.
+
+</details>
 
 ---
 
-## Selector resilience
+## Privacy and security
 
-WhatsApp's React class names rotate per deploy. `src/shared/selectors.ts` is the single file to update when WhatsApp ships a UI refactor. Each semantic role (`chatListRow`, `chatHeader`, `messageBubble`, `composer`, …) has a fallback chain anchored to stable IDs / ARIA landmarks (`#app`, `#pane-side`, `#main`, `[aria-label="Chat list"]`).
+BlurIt collects **zero** data:
+
+- **No network calls.** The extension never makes a `fetch`, `XMLHttpRequest`, or `WebSocket` request.
+- **No analytics.** Usage isn't tracked.
+- **No remote code.** Everything runs from the bundled extension code; nothing downloads from a server.
+- **Minimal permissions.** Only `storage` (for your settings) and access to `web.whatsapp.com` (the only website BlurIt ever touches).
+- **Open source.** Read the code in `src/`. Build it yourself.
+
+**What BlurIt protects you from:**
+- People glancing at your screen in public
+- Webcams pointed at your monitor
+- Screen-sharing on video calls
+- Someone walking past while you're typing
+
+**What BlurIt does *not* protect you from:**
+- Malware or screen-recording software on your computer
+- Other browser extensions with access to the page
+- Anyone with access to your unlocked machine
+- Accessibility tools that read the page's semantic content (intentional — screen readers must keep working)
 
 ---
 
-## Permissions
+## Developer guide
 
-- `storage` — persist user settings.
-- `host_permissions: https://web.whatsapp.com/*` — the only origin the extension ever touches.
+<details>
+<summary><b>Project layout</b></summary>
 
-No `<all_urls>`, no `tabs`, no `scripting`, no `activeTab`, no analytics, no network calls.
+```
+manifest.config.ts             ← MV3 manifest source (Chrome-shaped)
+vite.config.ts                 ← build config
+src/
+  content/                     ← injected into web.whatsapp.com
+    index.ts                   ← entry point
+    blur-engine.ts             ← applies <html> data attributes + CSS variables
+    observer.ts                ← MutationObserver with rAF debounce
+    tagger.ts                  ← stamps data-blurit-role on relevant nodes
+  popup/                       ← popup.html / .ts / .css
+  background/                  ← service worker (keyboard shortcut handler)
+  shared/                      ← types, defaults, constants, selectors, settings
+  styles/blur.css              ← the actual blur rules
+public/icons/                  ← icon.svg (source) + generated PNGs
+scripts/
+  zip-for-store.mjs            ← packages dist/ for Chrome Web Store
+  generate-icons.mjs           ← rasterises icon.svg → PNG sizes
+  transform-firefox.mjs        ← dist/ → dist-firefox/, rewrites manifest
+  dev-firefox.mjs              ← Firefox dev orchestrator
+```
 
-On Firefox, `about:addons` → BlurIt → Permissions lets the user revoke host access. Content scripts will stop running on the revoked origin until re-granted; settings stay intact. Chrome enforces the same listed permissions at install time and does not expose a runtime revoke toggle.
+The Firefox build is a derivation of the Chrome build, not a parallel build. `scripts/transform-firefox.mjs` only mutates `manifest.json`; assets and source files are copied verbatim. One source tree, two output bundles.
 
----
+</details>
 
-## Icons
+<details>
+<summary><b>How it works (one paragraph)</b></summary>
 
-The icon is authored as SVG (`public/icons/icon.svg`) and rasterised to the PNG sizes browsers need by a one-liner script:
+The content script sets a handful of `data-*` attributes on `<html>` plus a couple of CSS custom properties (`--blurit-radius`, `--blurit-delay-in`). All actual blurring is done by static rules in `src/styles/blur.css` keyed off WhatsApp's own structural selectors (`#pane-side [role="row"][data-testid^="list-item-"]`, `#main [role="row"]`, `#main header`). Because the CSS rules don't depend on JS having tagged anything, a newly mounted (virtualized) chat row is blurred on its very first paint — no flash of unblurred content. A single `MutationObserver` rooted at `#app`, debounced via `requestAnimationFrame`, walks freshly mounted subtrees only to stamp `data-blurit-role` exclusions on the composer footer and date-separator rows, mark the latest message, and apply the whitelist.
+
+</details>
+
+<details>
+<summary><b>npm scripts</b></summary>
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Vite dev server with Chrome HMR via `@crxjs/vite-plugin`. |
+| `npm run dev:firefox` | Orchestrates `vite build --watch` → manifest transform → `web-ext run` with live reload. Set `FIREFOX_BINARY` env var if Firefox is in a non-standard location. |
+| `npm run build` | Builds both targets (`dist/` and `dist-firefox/`). |
+| `npm run build:chrome` | Chrome build only. |
+| `npm run build:firefox` | Firefox transform (assumes `dist/` exists). |
+| `npm run zip` | Packages both targets for distribution. |
+| `npm run zip:chrome` | Chrome Web Store zip. |
+| `npm run zip:firefox` | AMO sideload zip. |
+| `npm run typecheck` | `tsc --noEmit`. |
+| `npm run lint` | ESLint over `src/`. |
+| `npm run lint:firefox` | `web-ext lint` over `dist-firefox/`. Must stay at zero errors and zero warnings before shipping. |
+| `npm run icons` | Rasterises `public/icons/icon.svg` → PNG sizes. |
+| `npm run format` | Prettier write. |
+
+</details>
+
+<details>
+<summary><b>Selector resilience (when WhatsApp ships a UI refactor)</b></summary>
+
+WhatsApp's React class names rotate per deploy. `src/shared/selectors.ts` is the single file to update when WhatsApp ships a UI refactor. Each semantic role (`chatListRow`, `chatHeader`, `messageBubble`, `composer`, …) has a fallback chain anchored to stable IDs / ARIA landmarks (`#app`, `#pane-side`, `#main`, `[aria-label="Chat list"]`). Add new candidate selectors at the top of the chain; the first one returning matches wins.
+
+</details>
+
+<details>
+<summary><b>Firefox-specific notes</b></summary>
+
+- Floor is Firefox **140+** to match the `data_collection_permissions` manifest schema key Mozilla now requires for new extensions. (FF 140 is the July 2025 release and current ESR baseline.)
+- The `gecko.id` is a UUID locked in `scripts/transform-firefox.mjs` and must not change.
+- In-popup keystroke rebinding uses `commands.update()` / `commands.reset()`, which Chrome doesn't expose. The same source code drives both browsers via a runtime `supportsCommandsRebind` capability flag.
+- `about:addons` → BlurIt → Permissions lets the user revoke host access. Content scripts stop running on the revoked origin until re-granted; settings stay intact.
+- AMO publication (signing, listing, source upload, privacy policy) is out of scope for this repo. The Firefox build is for sideload + local distribution.
+
+</details>
+
+<details>
+<summary><b>Icons</b></summary>
+
+The icon is authored as SVG (`public/icons/icon.svg`) and rasterised to PNG sizes via:
 
 ```
 npm run icons
 ```
 
-This regenerates `public/icons/icon-{16,32,48,128}.png` from the SVG using `@resvg/resvg-js`. Commit both the SVG (source) and the PNGs (so contributors don't need to run the generator just to load the extension).
+This regenerates `public/icons/icon-{16,32,48,128}.png` from the SVG using `@resvg/resvg-js`. Commit both the SVG (source) and the PNGs so contributors don't need to run the generator just to load the extension.
+
+</details>
 
 ---
 
-## Project layout
-
-```
-manifest.config.ts             ← MV3 manifest source-of-truth (Chrome-shaped)
-vite.config.ts
-src/
-  content/                     ← injected into web.whatsapp.com at document_start
-    index.ts                   ← entry: wait for #app, init engine + observer
-    blur-engine.ts             ← applies <html> data-attrs + CSS vars
-    observer.ts                ← MutationObserver + rAF flush
-    tagger.ts                  ← stamps data-blurit-role exclusions + latest/whitelist marks
-  popup/                       ← popup.html / .ts / .css (incl. FF rebind UI)
-  background/                  ← service worker (keyboard shortcut handler)
-  shared/                      ← types, defaults, constants, selectors, settings, browser-api
-  styles/blur.css              ← the actual blur rules
-public/icons/                  ← icon.svg (source) + generated PNGs
-scripts/
-  zip-for-store.mjs            ← packages dist/ → blurit-v<v>.zip for Chrome Web Store
-  generate-icons.mjs           ← rasterises icon.svg → PNG sizes
-  transform-firefox.mjs        ← dist/ → dist-firefox/, rewrites manifest for FF
-  dev-firefox.mjs              ← vite-watch ↔ transform ↔ web-ext orchestrator
-dist/                          ← Chrome output (gitignored)
-dist-firefox/                  ← Firefox output, derived from dist/ (gitignored)
-web-ext-artifacts/             ← Firefox zip output (gitignored)
-```
-
-The Firefox build is a **derivation** of the Chrome build, not a parallel build. `scripts/transform-firefox.mjs` only mutates `manifest.json` — assets and source files are copied verbatim, so crxjs's content-hashed asset filenames flow through unchanged.
-
----
-
-## Threat model
-
-**Protects against:** shoulder-surfing in public, casual webcam angles, screen-share calls where WhatsApp is open, recordings made by someone walking past.
-
-**Does NOT protect against:** anyone with DOM access (other extensions, an attacker on the unlocked machine), screen-recording malware (blur is purely visual; the DOM is unchanged), accessibility tooling that exposes accessible names (intentional — screen readers must work).
-
-No network calls. No remote code execution. No analytics. The only storage is the user's settings object via `storage.sync`, declared as `data_collection_permissions: "none"` on Firefox.
+*BlurIt is not affiliated with WhatsApp or Meta.*
