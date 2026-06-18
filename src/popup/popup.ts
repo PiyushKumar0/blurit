@@ -91,6 +91,10 @@ whitelistForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const raw = whitelistInput.value.trim();
   if (!raw) return;
+  if (raw.length > 60) {
+    showError('Contact name too long (max 60 characters).');
+    return;
+  }
   whitelistInput.value = '';
   const lower = raw.toLowerCase();
   updateWhitelist((current) =>
@@ -385,6 +389,12 @@ delay.addEventListener('input', () => {
 onSettingsChanged((next) => paint(next));
 
 void (async () => {
-  paint(await loadSettings());
-  await showCurrentShortcut();
+  try {
+    paint(await loadSettings());
+    await showCurrentShortcut();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[BlurIt] popup boot failed', err);
+    showError("Couldn't load settings. Try reopening the popup.");
+  }
 })();

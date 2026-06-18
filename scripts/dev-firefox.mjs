@@ -57,6 +57,10 @@ function runTransform() {
       stdio: 'inherit',
       env: { ...process.env, BLURIT_DEV_WATCH: '1' },
     });
+    child.on('error', (err) => {
+      console.error('[dev:firefox] transform spawn error:', err);
+      resolve(1);
+    });
     child.on('exit', (code) => resolve(code ?? 0));
   });
 }

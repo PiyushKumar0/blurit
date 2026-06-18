@@ -93,6 +93,11 @@ function readChatName(row: Element): string | null {
 
 function tagComposer(root: ParentNode): void {
   // Composer footer is the most safety-critical no-blur target. Walk first.
+  // querySelectorAll only sees descendants, so also check root itself: an
+  // observer can hand us a freshly-inserted <footer> as the subtree root.
+  if (root instanceof Element && root.matches('#main footer')) {
+    root.setAttribute(DATA_ATTRS.role, ROLE_VALUES.composer);
+  }
   const footers = root.querySelectorAll('#main footer');
   for (const el of footers) {
     el.setAttribute(DATA_ATTRS.role, ROLE_VALUES.composer);
@@ -104,12 +109,19 @@ function tagSystemAndDate(root: ParentNode): void {
   // children hadn't reconciled yet, which made them permanently unblurred
   // once the message bubble landed. Default-blur is the safe direction.
   // Add a positive `system` tagger here only when we have a verified signal.
-  const rows = root.querySelectorAll('#main [role="row"]');
-  for (const row of rows) {
-    if (row.hasAttribute(DATA_ATTRS.role)) continue;
+  const tagRow = (row: Element): void => {
+    if (row.hasAttribute(DATA_ATTRS.role)) return;
     const dataId = row.getAttribute('data-id') ?? '';
     if (dataId.startsWith('div-')) {
       row.setAttribute(DATA_ATTRS.role, ROLE_VALUES.date);
     }
+  };
+  // querySelectorAll only sees descendants, so also check root itself: the
+  // observer can hand us a freshly-inserted [role="row"] as the subtree root.
+  if (root instanceof Element && root.matches('#main [role="row"]')) {
+    tagRow(root);
+  }
+  for (const row of root.querySelectorAll('#main [role="row"]')) {
+    tagRow(row);
   }
 }
