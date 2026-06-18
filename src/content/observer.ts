@@ -8,23 +8,31 @@ import {
 /**
  * Single MutationObserver rooted at #app. Mutations coalesce into a
  * requestAnimationFrame flush to avoid layout thrash, and are attributed to a
- * pane (#main vs #pane-side) so each scanner only runs when its pane actually
- * changed:
+ * region so each scanner only runs when its region actually changed:
  *   - latest-message scan         → only when #main changed
- *   - whitelist row tagging (loop) → only when #pane-side changed
- *   - current-chat whitelist flag  → either pane (cheap single query)
+ *   - whitelist row tagging (loop) → only when the chat-list region changed
+ *   - current-chat whitelist flag  → either region (cheap single query)
  */
 export function startObserver(appRoot: Element): MutationObserver {
   const addedSubtrees = new Set<Node>();
   let mainTouched = false;
-  let paneSideTouched = false;
+  let listTouched = false;
   let frameScheduled = false;
 
   const markPanes = (node: Node) => {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node as Element;
-    if (!mainTouched && el.closest('#main')) mainTouched = true;
-    if (!paneSideTouched && el.closest('#pane-side')) paneSideTouched = true;
+    if (el.closest('#main')) {
+      mainTouched = true;
+      return;
+    }
+    if (listTouched) return;
+    if (
+      el.closest('#side, [data-testid="drawer-left"]') ||
+      el.querySelector('[data-testid="archived-chatlist"]')
+    ) {
+      listTouched = true;
+    }
   };
 
   const flush = () => {
@@ -37,11 +45,11 @@ export function startObserver(appRoot: Element): MutationObserver {
     addedSubtrees.clear();
 
     if (mainTouched) updateLatestMessage();
-    if (paneSideTouched) tagWhitelistedRows();
-    if (mainTouched || paneSideTouched) updateCurrentWhitelistedFlag();
+    if (listTouched) tagWhitelistedRows();
+    if (mainTouched || listTouched) updateCurrentWhitelistedFlag();
 
     mainTouched = false;
-    paneSideTouched = false;
+    listTouched = false;
   };
 
   const schedule = () => {
@@ -59,7 +67,7 @@ export function startObserver(appRoot: Element): MutationObserver {
         markPanes(node);
       }
     }
-    if (mainTouched || paneSideTouched || addedSubtrees.size > 0) schedule();
+    if (mainTouched || listTouched || addedSubtrees.size > 0) schedule();
   });
 
   observer.observe(appRoot, { childList: true, subtree: true });

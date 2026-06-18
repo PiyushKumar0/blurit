@@ -91,6 +91,10 @@ whitelistForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const raw = whitelistInput.value.trim();
   if (!raw) return;
+  if (raw.length > 60) {
+    showError('Contact name too long (max 60 characters).');
+    return;
+  }
   whitelistInput.value = '';
   const lower = raw.toLowerCase();
   updateWhitelist((current) =>
@@ -105,7 +109,7 @@ async function showCurrentShortcut(): Promise<void> {
     if (cmd?.shortcut) shortcutKbd.textContent = cmd.shortcut;
     else shortcutKbd.textContent = 'unbound';
   } catch {
-    // ignore — keep default text
+    // ignore - keep default text
   }
 }
 
@@ -118,9 +122,7 @@ async function showCurrentShortcut(): Promise<void> {
 // Visibility is driven by `supportsCommandsRebind`, a runtime check rather
 // than a build flag so the same code ships to both engines.
 
-// navigator.platform is deprecated; the modern read uses userAgentData when
-// present (Chromium 90+) and falls back to userAgent everywhere else (Firefox
-// doesn't ship userAgentData yet but exposes 'Mac' in its UA on macOS).
+// (Firefox doesn't ship userAgentData yet but exposes 'Mac' in its UA on macOS).
 const IS_MAC = (() => {
   const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } })
     .userAgentData;
@@ -198,7 +200,7 @@ function handleCaptureKeydown(e: KeyboardEvent): void {
   e.preventDefault();
   e.stopPropagation();
 
-  // commands.update is async — drop keys arriving during the in-flight
+  // commands.update is async - drop keys arriving during the in-flight
   // persist so OS key-repeat or fast typing can't queue a second binding.
   if (captureCommitting) return;
 
@@ -207,7 +209,7 @@ function handleCaptureKeydown(e: KeyboardEvent): void {
     return;
   }
 
-  // Ignore lone modifier presses — wait for the user to commit to a
+  // Ignore lone modifier presses - wait for the user to commit to a
   // non-modifier key.
   if (isModifierKey(e.key)) return;
 
@@ -243,7 +245,7 @@ function buildShortcut(e: KeyboardEvent): ShortcutResult {
   }
 
   // Firefox accepts media keys and function keys as standalone shortcuts
-  // (no modifier required). Everything else needs Ctrl or Alt — or
+  // (no modifier required). Everything else needs Ctrl or Alt, or
   // Command/MacCtrl on macOS. Edge cases (Shift+Fn, F13–F19 standalone)
   // defer to commands.update, which surfaces a clearer error than we can
   // synthesize.
@@ -387,6 +389,12 @@ delay.addEventListener('input', () => {
 onSettingsChanged((next) => paint(next));
 
 void (async () => {
-  paint(await loadSettings());
-  await showCurrentShortcut();
+  try {
+    paint(await loadSettings());
+    await showCurrentShortcut();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[BlurIt] popup boot failed', err);
+    showError("Couldn't load settings. Try reopening the popup.");
+  }
 })();

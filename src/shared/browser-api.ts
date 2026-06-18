@@ -5,7 +5,7 @@
 // simply don't exist on Chrome's runtime even though @types/chrome includes
 // them.
 //
-// We deliberately do NOT use webextension-polyfill — every API surface we
+// We deliberately do NOT use webextension-polyfill. Every API surface we
 // touch (storage.sync, storage.onChanged, commands, tabs.create) already
 // returns Promises on both engines.
 

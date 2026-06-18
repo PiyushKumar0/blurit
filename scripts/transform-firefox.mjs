@@ -17,7 +17,7 @@ const ROOT = join(__dirname, '..');
 const SRC = join(ROOT, 'dist');
 const DEST = join(ROOT, 'dist-firefox');
 
-// Locked once via crypto.randomUUID(). Do NOT regenerate — Firefox treats
+// Locked once via crypto.randomUUID(). Do NOT regenerate, Firefox treats
 // gecko.id as the extension's stable identity across versions. UUID form is
 // preferred over email form: it passes web-ext lint strictly and never
 // collides with someone else's address.
@@ -30,8 +30,6 @@ const GECKO_ID = '{dfe88074-655a-48d2-bd67-03705c240a29}';
 //     now required by Mozilla on new extensions. Setting the floor at 140
 //     lets us declare it honestly without web-ext lint warning about an
 //     unsupported manifest key on older releases.
-//   - FF 140 was the July 2025 release and the current ESR baseline, so the
-//     floor is well below the active user fleet.
 const STRICT_MIN_VERSION = '140.0';
 
 const FIREFOX_SHORTCUT = {
@@ -43,7 +41,7 @@ function ensureSrcExists() {
   // Returns true if ready, false if we should bail quietly. The watch-mode
   // caller (dev-firefox.mjs) can fire while vite is mid-rebuild (emptyOutDir
   // deletes then re-writes manifest.json); bailing quietly avoids alarming
-  // stack traces — the watcher will fire again once the new manifest lands.
+  // stack traces, the watcher will fire again once the new manifest lands.
   if (!existsSync(SRC) || !existsSync(join(SRC, 'manifest.json'))) {
     const standalone = !process.env.BLURIT_DEV_WATCH;
     if (standalone) {
@@ -80,17 +78,12 @@ function transformManifest() {
 
   // 2. inject browser_specific_settings
   //
-  // data_collection_permissions: "none" — Mozilla now requires this key on
-  // new extensions (and will require it on updates to existing ones). BlurIt
-  // makes zero network calls and only persists settings via storage.sync
-  // (the user's own data syncing across their own devices, which Mozilla
-  // does not classify as data collection). "none" is the honest declaration.
+  // data_collection_permissions: "none" - Mozilla now requires this key on
+  // new extensions.
   //
-  // gecko_android.strict_min_version: 142.0 — the schema key
-  // data_collection_permissions landed on Android one release later than on
-  // desktop. The plan defers Android support, but declaring the Android
-  // floor explicitly silences the web-ext lint warning without committing
-  // us to anything beyond what shipping on desktop already implies.
+  // gecko_android.strict_min_version: 142.0 - The plan defers Android support,
+  // but declaring the Android floor explicitly silences the web-ext lint 
+  // warning.
   m.browser_specific_settings = {
     gecko: {
       id: GECKO_ID,
@@ -136,7 +129,7 @@ function summary() {
   };
   walk(DEST);
   const kb = (bytes / 1024).toFixed(1);
-  console.log(`dist-firefox/ ready — ${fileCount} files, ${kb} KB`);
+  console.log(`dist-firefox/ ready - ${fileCount} files, ${kb} KB`);
 }
 
 if (ensureSrcExists()) {

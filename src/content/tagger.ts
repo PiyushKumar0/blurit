@@ -1,13 +1,10 @@
 import { DATA_ATTRS, ROLE_VALUES } from '../shared/constants';
+import { CHAT_LIST_ROW_SELECTOR } from '../shared/selectors';
 
 /**
  * Stamps data-blurit-role on nodes within a freshly-mounted subtree so the
  * exclusion-style CSS rules (e.g. ":not([data-blurit-role='system'])") can
  * tell apart message rows that should never be blurred.
- *
- * Note: positive blur rules in blur.css key on WhatsApp's own structural
- * selectors directly — we don't need to tag rows we DO want blurred. We only
- * tag the exclusions.
  */
 export function tagSubtree(root: ParentNode): void {
   tagComposer(root);
@@ -34,7 +31,7 @@ export function updateLatestMessage(): void {
 }
 
 /**
- * Whitelist state — updated by blur-engine when settings change.
+ * Whitelist state - updated by blur-engine when settings change.
  * Names are lowercased for case-insensitive matching against [title] attrs.
  */
 let activeWhitelist = new Set<string>();
@@ -45,13 +42,13 @@ export function setWhitelist(names: string[]): void {
 
 export function tagWhitelistedRows(): void {
   if (activeWhitelist.size === 0) {
-    for (const el of document.querySelectorAll(`#pane-side [${DATA_ATTRS.whitelisted}="true"]`)) {
+    for (const el of document.querySelectorAll(`[${DATA_ATTRS.whitelisted}="true"]`)) {
       el.removeAttribute(DATA_ATTRS.whitelisted);
     }
     return;
   }
 
-  const rows = document.querySelectorAll('#pane-side [role="row"][data-testid^="list-item-"]');
+  const rows = document.querySelectorAll(CHAT_LIST_ROW_SELECTOR);
   for (const row of rows) {
     const title = readChatName(row);
     const isWhitelisted = title !== null && activeWhitelist.has(title.toLowerCase());
@@ -71,7 +68,8 @@ export function updateCurrentWhitelistedFlag(): void {
 
   if (activeWhitelist.size > 0) {
     const selected = document.querySelector(
-      '#pane-side [role="row"][data-testid^="list-item-"]:has([aria-selected="true"])',
+      ':is(#side, [data-testid="archived-chatlist"]) ' +
+        ':is([role="listitem"], [role="row"]):has([aria-selected="true"])',
     );
     const title = selected ? readChatName(selected) : null;
     isWhitelisted = title !== null && activeWhitelist.has(title.toLowerCase());
@@ -95,6 +93,11 @@ function readChatName(row: Element): string | null {
 
 function tagComposer(root: ParentNode): void {
   // Composer footer is the most safety-critical no-blur target. Walk first.
+  // querySelectorAll only sees descendants, so also check root itself: an
+  // observer can hand us a freshly-inserted <footer> as the subtree root.
+  if (root instanceof Element && root.matches('#main footer')) {
+    root.setAttribute(DATA_ATTRS.role, ROLE_VALUES.composer);
+  }
   const footers = root.querySelectorAll('#main footer');
   for (const el of footers) {
     el.setAttribute(DATA_ATTRS.role, ROLE_VALUES.composer);
@@ -106,12 +109,19 @@ function tagSystemAndDate(root: ParentNode): void {
   // children hadn't reconciled yet, which made them permanently unblurred
   // once the message bubble landed. Default-blur is the safe direction.
   // Add a positive `system` tagger here only when we have a verified signal.
-  const rows = root.querySelectorAll('#main [role="row"]');
-  for (const row of rows) {
-    if (row.hasAttribute(DATA_ATTRS.role)) continue;
+  const tagRow = (row: Element): void => {
+    if (row.hasAttribute(DATA_ATTRS.role)) return;
     const dataId = row.getAttribute('data-id') ?? '';
     if (dataId.startsWith('div-')) {
       row.setAttribute(DATA_ATTRS.role, ROLE_VALUES.date);
     }
+  };
+  // querySelectorAll only sees descendants, so also check root itself: the
+  // observer can hand us a freshly-inserted [role="row"] as the subtree root.
+  if (root instanceof Element && root.matches('#main [role="row"]')) {
+    tagRow(root);
+  }
+  for (const row of root.querySelectorAll('#main [role="row"]')) {
+    tagRow(row);
   }
 }
