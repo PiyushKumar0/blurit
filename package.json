@@ -2,7 +2,7 @@
   "name": "blurit",
   "private": true,
   "version": "1.0.0",
-  "description": "Web browser extension that blurs sensitive UI on WhatsApp Web and reveals on hover, along with some extra features to reduce shoulder-surfing risk.",
+  "description": "Web browser extension that blurs sensitive UI on WhatsApp Web and reveals on hover.",
   "license": "MIT",
   "type": "module",
   "engines": {
