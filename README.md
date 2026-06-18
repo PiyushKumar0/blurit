@@ -8,7 +8,7 @@ Works on **Chrome**, **Edge**, and **Firefox**.
 
 ## Why BlurIt?
 
-You're in a café. On a Zoom call sharing your screen. Or in an open-plan office. WhatsApp Web is open in another tab — and anyone who glances over can read everything: who's messaging you, what they said, the photos they sent.
+You're in a café. On a Zoom call sharing your screen. Or in an open-plan office. WhatsApp Web is open in another tab, and anyone who glances over can read everything: who's messaging you, what they said, the photos they sent.
 
 BlurIt fixes that. It softly blurs three sensitive areas of WhatsApp Web until you intentionally hover them with your cursor. **You** can still read your chats. **Everyone else** sees only fuzz.
 
@@ -50,10 +50,10 @@ Each can be turned on or off independently.
 So the extension stays useful:
 
 - The **text box** where you type your reply
-- The **status line** under the contact's name in the header ("online", "typing…", "last seen…") — it's a useful presence cue and reveals little on its own
-- The **call / video / search / menu** buttons in the chat header — so you can still click them
-- **Date separators** ("Today", "Yesterday") and the end-to-end encryption notice — no private info
-- The chat you currently have **open** in the list — so you know which conversation you're in
+- The **status line** under the contact's name in the header ("online", "typing…", "last seen…"); it's a useful presence cue and reveals little on its own
+- The **call / video / search / menu** buttons in the chat header, so you can still click them
+- **Date separators** ("Today", "Yesterday") and the end-to-end encryption notice, no private info
+- The chat you currently have **open** in the list, so you know which conversation you're in
 
 ---
 
@@ -63,7 +63,7 @@ So the extension stays useful:
 - **Master switch.** One toggle (or a keyboard shortcut) to turn everything off when you don't need it.
 - **Independent toggles.** Blur chat list / chat header / messages on or off separately.
 - **Whitelist contacts.** Pick contacts whose conversations should never be blurred (e.g. delivery bots, news feeds, your own notes).
-- **Always show latest message.** *Optional.* Keeps the most recent message in the open chat visible at all times, while blurring everything above it — so you don't miss new replies without un-blurring the history.
+- **Always show latest message.** *Optional.* Keeps the most recent message in the open chat visible at all times, while blurring everything above it, so you don't miss new replies without un-blurring the history.
 - **Adjustable blur intensity.** Slide between subtle (4px) and unreadable (16px).
 - **Adjustable reveal delay.** Tune how patient you want to be (0–500ms) before a hover reveals.
 - **Keyboard shortcut.** Toggle master on/off without opening the popup.
@@ -85,8 +85,8 @@ npm run build
 
 That gives you two folders:
 
-- `dist/` — for Chrome and Edge
-- `dist-firefox/` — for Firefox
+- `dist/` - for Chrome and Edge
+- `dist-firefox/` - for Firefox
 
 ### Step 2 — Load it into your browser
 
@@ -108,7 +108,7 @@ That gives you two folders:
 3. Click **Load Temporary Add-on…**
 4. Navigate into **`dist-firefox`** and pick **`manifest.json`**
 
-> Firefox unloads temporary add-ons when you close the browser. To use BlurIt again next time, repeat the load step. *(This is how Firefox handles unsigned extensions — not specific to BlurIt.)*
+> Firefox unloads temporary add-ons when you close the browser. To use BlurIt again next time, repeat the load step. *(This is how Firefox handles unsigned extensions)*
 
 </details>
 
@@ -142,7 +142,7 @@ Click the **BlurIt icon** in your browser toolbar to open the settings popup. He
 ║    ━━━●━━━━━━━━━━━━━━━ 200ms ║   ← how long to hover before un-blurring
 ╠══════════════════════════════╣
 ║  NEVER BLUR THESE CONTACTS   ║
-║  [Mom ✕] [Order Bot ✕]       ║   ← per-contact whitelist
+║  [Mom ✕] [Order Bot ✕]      ║   ← per-contact whitelist
 ║  Contact name…       [Add]   ║
 ╠══════════════════════════════╣
 ║  Shortcut: Ctrl+Shift+B      ║
@@ -192,14 +192,14 @@ Yes. The blur happens at the pixel level, so it works in both light and dark the
 <details>
 <summary><b>Can people with screen-recording software still see my messages?</b></summary>
 
-Yes — the blur is purely visual. BlurIt protects you from people glancing at your screen, not from software running on your computer. See [Privacy and security](#privacy-and-security) below.
+Yes, the blur is purely visual. BlurIt protects you from people glancing at your screen, not from software running on your computer. See [Privacy and security](#privacy-and-security) below.
 
 </details>
 
 <details>
 <summary><b>Will my settings sync to my other computers?</b></summary>
 
-Yes — through your Chrome or Firefox account sync. No external server is involved; BlurIt simply uses your browser's built-in sync.
+Yes, through your Chrome or Firefox account sync. No external server is involved; BlurIt simply uses your browser's built-in sync.
 
 </details>
 
@@ -213,7 +213,7 @@ WhatsApp occasionally ships UI changes that move the elements BlurIt targets. Th
 <details>
 <summary><b>Why aren't there any blurring effects on the message I'm typing?</b></summary>
 
-By design. The text box where you type your reply is never blurred — otherwise you couldn't read what you were typing.
+By design. The text box where you type your reply is never blurred, otherwise you couldn't read what you were typing.
 
 </details>
 
@@ -239,7 +239,7 @@ BlurIt collects **zero** data:
 - Malware or screen-recording software on your computer
 - Other browser extensions with access to the page
 - Anyone with access to your unlocked machine
-- Accessibility tools that read the page's semantic content (intentional — screen readers must keep working)
+- Accessibility tools that read the page's semantic content (intentional, screen readers must keep working)
 
 ---
 
@@ -276,7 +276,7 @@ The Firefox build is a derivation of the Chrome build, not a parallel build. `sc
 <details>
 <summary><b>How it works (one paragraph)</b></summary>
 
-The content script sets a handful of `data-*` attributes on `<html>` plus a couple of CSS custom properties (`--blurit-radius`, `--blurit-delay-in`). All actual blurring is done by static rules in `src/styles/blur.css` keyed off WhatsApp's own structural selectors (`#pane-side [role="row"][data-testid^="list-item-"]`, `#main [role="row"]`, `#main header`). Because the CSS rules don't depend on JS having tagged anything, a newly mounted (virtualized) chat row is blurred on its very first paint — no flash of unblurred content. A single `MutationObserver` rooted at `#app`, debounced via `requestAnimationFrame`, walks freshly mounted subtrees only to stamp `data-blurit-role` exclusions on the composer footer and date-separator rows, mark the latest message, and apply the whitelist.
+The content script sets a handful of `data-*` attributes on `<html>` plus a couple of CSS custom properties (`--blurit-radius`, `--blurit-delay-in`). All actual blurring is done by static rules in `src/styles/blur.css` keyed off WhatsApp's own structural selectors (`#pane-side [role="row"][data-testid^="list-item-"]`, `#main [role="row"]`, `#main header`). Because the CSS rules don't depend on JS having tagged anything, a newly mounted (virtualized) chat row is blurred on its very first paint, no flash of unblurred content. A single `MutationObserver` rooted at `#app`, debounced via `requestAnimationFrame`, walks freshly mounted subtrees only to stamp `data-blurit-role` exclusions on the composer footer and date-separator rows, mark the latest message, and apply the whitelist.
 
 </details>
 

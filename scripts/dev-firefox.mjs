@@ -32,13 +32,6 @@ function quoteForWinShell(arg) {
 
 function spawnTracked(cmd, args, opts = {}) {
   // stdio inherit so vite + web-ext logs reach the user.
-  //
-  // Windows .cmd shims (like npx.cmd) need shell: true under Node 22+
-  // (CVE-2024-27980 hardening). But shell + args-as-array means cmd.exe
-  // re-parses the args, dropping anything it interprets specially — which
-  // is why the previous attempt sent no args to web-ext at all. Building
-  // a single quoted command string and passing shell: true gets the args
-  // through verbatim. Non-shell spawns (Node binaries) take the args array.
   if (IS_WIN && cmd.endsWith('.cmd')) {
     const cmdline = [cmd, ...args.map(quoteForWinShell)].join(' ');
     const child = spawn(cmdline, {
@@ -59,9 +52,7 @@ function spawnTracked(cmd, args, opts = {}) {
 
 function runTransform() {
   return new Promise((resolve) => {
-    // Reuse the same node binary that's running this script. The env flag
-    // tells transform-firefox.mjs to bail quietly (not throw) if dist/ is
-    // mid-write — the watcher will fire again once vite settles.
+    // Reuse the same node binary that's running this script.
     const child = spawnTracked(NODE, [TRANSFORM], {
       stdio: 'inherit',
       env: { ...process.env, BLURIT_DEV_WATCH: '1' },
@@ -113,8 +104,7 @@ function watchDist() {
   }
   // Watch the directory, not the file: vite's emptyOutDir unlinks
   // manifest.json before rewriting it, and fs.watch on a file is bound
-  // to its inode — the watcher silently stops firing after the first
-  // rebuild on Linux/macOS. Filename is null on some platforms, so fall
+  // to its inode. Filename is null on some platforms, so fall
   // through to schedule unconditionally; the transform is debounced.
   watch(DIST, { persistent: true }, (_event, filename) => {
     if (!filename || filename === 'manifest.json') scheduleTransform();
@@ -133,14 +123,6 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 // web-ext run reloads on dist-firefox/ changes.
-//
-// Spawned lazily after the first successful transform — on a clean
-// checkout dist-firefox/ doesn't exist yet, and web-ext exits immediately
-// if --source-dir is missing at launch.
-//
-// Honour FIREFOX_BINARY for installs outside the standard discovery paths
-// (e.g. %LOCALAPPDATA%\Mozilla Firefox on Windows). When unset, web-ext's
-// built-in discovery handles Program Files / Program Files (x86) / homebrew.
 let webExtStarted = false;
 function startWebExtOnce() {
   if (webExtStarted) return;

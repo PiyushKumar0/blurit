@@ -7,8 +7,7 @@ import { DEFAULT_SETTINGS } from '../shared/defaults';
 // Fail-safe-to-blur: apply defaults synchronously at document_start so the
 // chat list / header / messages are blurred from the very first paint, before
 // chrome.storage.sync returns. init() overwrites with the user's choices once
-// storage resolves. Users who opted out (master=false) see a brief blur on
-// load — acceptable cost for closing the shoulder-surf flash window.
+// storage resolves.
 applySettings(DEFAULT_SETTINGS);
 
 async function init(): Promise<void> {

@@ -1,13 +1,10 @@
 import { DATA_ATTRS, ROLE_VALUES } from '../shared/constants';
+import { CHAT_LIST_ROW_SELECTOR } from '../shared/selectors';
 
 /**
  * Stamps data-blurit-role on nodes within a freshly-mounted subtree so the
  * exclusion-style CSS rules (e.g. ":not([data-blurit-role='system'])") can
  * tell apart message rows that should never be blurred.
- *
- * Note: positive blur rules in blur.css key on WhatsApp's own structural
- * selectors directly — we don't need to tag rows we DO want blurred. We only
- * tag the exclusions.
  */
 export function tagSubtree(root: ParentNode): void {
   tagComposer(root);
@@ -34,7 +31,7 @@ export function updateLatestMessage(): void {
 }
 
 /**
- * Whitelist state — updated by blur-engine when settings change.
+ * Whitelist state - updated by blur-engine when settings change.
  * Names are lowercased for case-insensitive matching against [title] attrs.
  */
 let activeWhitelist = new Set<string>();
@@ -45,13 +42,13 @@ export function setWhitelist(names: string[]): void {
 
 export function tagWhitelistedRows(): void {
   if (activeWhitelist.size === 0) {
-    for (const el of document.querySelectorAll(`#pane-side [${DATA_ATTRS.whitelisted}="true"]`)) {
+    for (const el of document.querySelectorAll(`[${DATA_ATTRS.whitelisted}="true"]`)) {
       el.removeAttribute(DATA_ATTRS.whitelisted);
     }
     return;
   }
 
-  const rows = document.querySelectorAll('#pane-side [role="row"][data-testid^="list-item-"]');
+  const rows = document.querySelectorAll(CHAT_LIST_ROW_SELECTOR);
   for (const row of rows) {
     const title = readChatName(row);
     const isWhitelisted = title !== null && activeWhitelist.has(title.toLowerCase());
@@ -71,7 +68,8 @@ export function updateCurrentWhitelistedFlag(): void {
 
   if (activeWhitelist.size > 0) {
     const selected = document.querySelector(
-      '#pane-side [role="row"][data-testid^="list-item-"]:has([aria-selected="true"])',
+      ':is(#side, [data-testid="archived-chatlist"]) ' +
+        ':is([role="listitem"], [role="row"]):has([aria-selected="true"])',
     );
     const title = selected ? readChatName(selected) : null;
     isWhitelisted = title !== null && activeWhitelist.has(title.toLowerCase());

@@ -5,20 +5,27 @@ import type { SemanticRole } from './types';
  * the first chain entry returning matches wins.
  *
  * Selector hygiene: every chain is anchored to a stable ID/landmark
- * (#app, #pane-side, #main, header, footer) to avoid stray matches from
+ * (#app, #side, #pane-side, #main, header, footer) to avoid stray matches from
  * popovers, dialogs, or extensions.
  */
 type SelectorChain = readonly string[];
 
 export const RESOLVERS: Record<SemanticRole, SelectorChain> = {
   appRoot: ['div#app', '[role="application"]'],
-  // #pane-side wraps the Archived button + chat list. Chat rows are
-  // [role="row"][data-testid^="list-item-N"] inside the inner "Chat list"
-  // grid; selection is signalled by aria-selected="true" on a nested div.
-  chatListPane: ['div#pane-side'],
+  // Chat rows live in TWO separate places:
+  //   1. The main list + search results: inside #side (the left column).
+  //     These rows are [role="row"] (legacy builds added data-testid^="list-item-").
+  //   2. The Archived view: a left DRAWER mounted OUTSIDE #side, under
+  //     [data-testid="drawer-left"]; its list container is
+  //     [data-testid="archived-chatlist"] and its rows are [role="listitem"].
+  // Selection is signalled by aria-selected="true" on a nested div.
+  chatListPane: ['div#side', 'div[data-testid="archived-chatlist"]', 'div#pane-side'],
   chatListRow: [
+    '#side [role="listitem"]',
+    '#side [role="row"]',
+    '[data-testid="archived-chatlist"] [role="listitem"]',
+    '[data-testid="archived-chatlist"] [role="row"]',
     '#pane-side [role="row"][data-testid^="list-item-"]',
-    '#pane-side div[aria-label="Chat list"][role="grid"] [role="row"]',
   ],
   searchInput: [
     'div[contenteditable="true"][role="textbox"][data-tab="3"]',
@@ -39,6 +46,9 @@ export const RESOLVERS: Record<SemanticRole, SelectorChain> = {
   composer: ['#main footer', '#main [data-tab="10"]'],
 };
 
+export const CHAT_LIST_ROW_SELECTOR =
+  ':is(#side, [data-testid="archived-chatlist"]) :is([role="listitem"], [role="row"])';
+
 export function resolveAll(role: SemanticRole, scope: ParentNode = document): Element[] {
   const chain = RESOLVERS[role];
   for (const selector of chain) {
@@ -46,7 +56,7 @@ export function resolveAll(role: SemanticRole, scope: ParentNode = document): El
       const matches = scope.querySelectorAll(selector);
       if (matches.length > 0) return Array.from(matches);
     } catch {
-      // Selectors using :has() or similar may throw on older Chrome — try next.
+      // Selectors using :has() or similar may throw on older Chrome, try next.
     }
   }
   return [];

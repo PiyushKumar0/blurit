@@ -9,9 +9,9 @@
  *     --blurit-delay-out, --blurit-transition.
  *
  * Why CSS does the heavy lifting: keying rules on WhatsApp's own structural
- * selectors (#pane-side, [role="listitem"], #main, etc.) means the blur applies
+ * selectors (#side, [role="listitem"], #main, etc.) means the blur applies
  * on the very first paint of a newly mounted (virtualized) node, before any
- * MutationObserver callback runs — no flash-of-unblurred-content.
+ * MutationObserver callback runs, no flash-of-unblurred-content.
  */
 
 :root {
@@ -22,12 +22,10 @@
 }
 
 /* ─── Feature 1: chat list rows ──────────────────────────────────────────── */
-/* WhatsApp's chat rows are [role="row"][data-testid^="list-item-"] inside
- * #pane-side. */
 
 html[data-blurit-master='on'][data-blurit-feature-list='on']
-  #pane-side
-  [role='row'][data-testid^='list-item-']:not([data-blurit-whitelisted='true']) {
+  :is(#side, [data-testid='archived-chatlist'])
+  :is([role='listitem'], [role='row']):not([data-blurit-whitelisted='true']) {
   filter: blur(var(--blurit-radius));
   transition: filter var(--blurit-transition) ease;
   transition-delay: var(--blurit-delay-out);
@@ -35,13 +33,13 @@ html[data-blurit-master='on'][data-blurit-feature-list='on']
 }
 
 html[data-blurit-master='on'][data-blurit-feature-list='on']
-  #pane-side
-  [role='row'][data-testid^='list-item-']:not([data-blurit-whitelisted='true']):hover {
+  :is(#side, [data-testid='archived-chatlist'])
+  :is([role='listitem'], [role='row']):not([data-blurit-whitelisted='true']):hover {
   filter: blur(0);
   transition-delay: var(--blurit-delay-in);
 }
 
-/* ─── Feature 2: chat header — contact name + profile picture only ───────── */
+/* ─── Feature 2: chat header: contact name + profile picture only ───────── */
 
 html[data-blurit-master='on'][data-blurit-feature-header='on']:not(
     [data-blurit-current-whitelisted='on']
@@ -120,7 +118,9 @@ html[data-blurit-master='on'] #main header [role='button'] {
   :root {
     --blurit-transition: 0ms;
   }
-  html[data-blurit-master='on'] #pane-side [role='row'],
+  html[data-blurit-master='on']
+    :is(#side, [data-testid='archived-chatlist'])
+    :is([role='listitem'], [role='row']),
   html[data-blurit-master='on'] #main header *,
   html[data-blurit-master='on'] #main [role='row'] [data-testid^='conv-msg-'] {
     transition: none !important;

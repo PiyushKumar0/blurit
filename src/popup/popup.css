@@ -343,7 +343,7 @@ a:hover {
 /* The `[hidden]` HTML attribute sets `display: none` via the UA stylesheet,
  * but author rules that set `display` directly override it. Gate the
  * display rule on `:not([hidden])` so the banner stays hidden at rest on
- * both browsers — only shown once startCapture() unhides it. */
+ * both browsers and only shown once startCapture() unhides it. */
 .capture-banner {
   margin-top: 8px;
   padding: 6px 10px;
